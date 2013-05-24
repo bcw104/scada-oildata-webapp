@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" 
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+    xmlns:jms="http://www.springframework.org/schema/jms"
+    xmlns:cache="http://www.springframework.org/schema/cache"
+    xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-3.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.2.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.2.xsd
+		http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+		http://www.springframework.org/schema/jms 
+		http://www.springframework.org/schema/jms/spring-jms-3.2.xsd
+		http://www.springframework.org/schema/cache 
+		http://www.springframework.org/schema/cache/spring-cache.xsd
+		http://www.springframework.org/schema/util 
+		http://www.springframework.org/schema/util/spring-util.xsd">
+
+
+	<description>Spring公共配置</description>
+
+    <context:property-placeholder ignore-unresolvable="true" location="classpath*:/redis.properties" />
+
+    <import resource="classpath:applicatoinContext-redis.xml" />
+    <import resource="classpath:applicatonContext-jpa.xml" />
+    <import resource="classpath:applicationContext-security.xml" />
+
+	<!-- 使用annotation 自动注册bean, 并保证@Required、@Autowired的属性被注入 -->
+	<context:annotation-config/>
+    <!--<context:component-scan base-package="com.ht.scada.**.entity, com.ht.scada.**.service.impl">-->
+	<context:component-scan base-package="com.ht.scada.**.entity, com.ht.scada.common.**.service.impl,
+	com.ht.scada.security.**.service.impl, com.ht.scada.oildata.**.service.impl,
+	com.ht.scada.data.service.testimpl">
+		<!--<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
+	</context:component-scan>
+
+	<!-- 声明cacheManager -->
+	<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager" p:cacheManager-ref="ehcache" />
+	<!-- cacheManager工厂类，指定ehcache.xml的位置 -->
+	<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:configLocation="classpath:/ehcache.xml" />
+	
+</beans>

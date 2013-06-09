@@ -30,8 +30,8 @@
 
     <context:property-placeholder ignore-unresolvable="true" location="classpath*:/redis.properties" />
 
-    <import resource="classpath:applicatoinContext-redis.xml" />
-    <import resource="classpath:applicatonContext-jpa.xml" />
+    <import resource="classpath:applicationContext-redis.xml" />
+    <import resource="classpath:applicationContext-jpa.xml" />
     <import resource="classpath:applicationContext-security.xml" />
 
 	<!-- 使用annotation 自动注册bean, 并保证@Required、@Autowired的属性被注入 -->

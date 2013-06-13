@@ -22,11 +22,6 @@
         </dependency>
         <dependency>
             <groupId>com.ht.scada</groupId>
-            <artifactId>scada-security</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ht.scada</groupId>
             <artifactId>scada-data</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -35,13 +30,6 @@
             <artifactId>scada-oildata</artifactId>
             <version>${project.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.shiro</groupId>
-            <artifactId>shiro-ehcache</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-
 
         <dependency>
             <groupId>org.slf4j</groupId>

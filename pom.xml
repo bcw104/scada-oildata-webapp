@@ -326,4 +326,7 @@
             </build>
         </profile>
     </profiles>
+    <properties>
+        <netbeans.hint.deploy.server>Tomcat</netbeans.hint.deploy.server>
+    </properties>
 </project>

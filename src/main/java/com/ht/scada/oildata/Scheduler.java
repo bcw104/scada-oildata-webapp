@@ -3,6 +3,7 @@ package com.ht.scada.oildata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ht.scada.oildata.entity.FaultDiagnoseRecord;
+import java.text.SimpleDateFormat;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -30,21 +31,23 @@ public class Scheduler {
     private StringRedisTemplate redisTemplate;
     // todo 自动注入各种服务类接口
     
-    private int interval = 1;//分钟间隔
+    private int interval = 3;//分钟间隔
 
     @PostConstruct
     public void init() {
         executorService = Executors.newSingleThreadScheduledExecutor();
 
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Calendar now = Calendar.getInstance();
-        long delay = interval*60 - (now.getTimeInMillis() % (interval*60));
+        long delay = interval*60 - ((now.getTimeInMillis()/1000) % 60);
+        System.out.println(sdf.format(now.getTime()));
         System.out.println(delay);
         // 从下个整点开始每隔1小时计算一次功图数据
         executorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 // todo 计算功图数据并写入数据库、生成功图图片、故障诊断
-            	System.out.println(new Date().toString());
+            	System.out.println("现在时刻：" + new Date().toString());
             }
         }, delay, interval*60, TimeUnit.SECONDS);
     }

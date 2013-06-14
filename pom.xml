@@ -12,17 +12,12 @@
     <groupId>com.ht.scada</groupId>
     <artifactId>scada-oildata-webapp</artifactId>
     <packaging>war</packaging>
-    <name>功图量油Web应用程序</name>
+    <name>功图Web应用程序</name>
 
     <dependencies>
         <dependency>
             <groupId>com.ht.scada</groupId>
             <artifactId>scada-tag</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ht.scada</groupId>
-            <artifactId>scada-security</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -35,13 +30,6 @@
             <artifactId>scada-oildata</artifactId>
             <version>${project.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.shiro</groupId>
-            <artifactId>shiro-ehcache</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -338,4 +326,7 @@
             </build>
         </profile>
     </profiles>
+    <properties>
+        <netbeans.hint.deploy.server>Tomcat</netbeans.hint.deploy.server>
+    </properties>
 </project>

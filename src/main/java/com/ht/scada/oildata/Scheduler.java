@@ -2,63 +2,75 @@ package com.ht.scada.oildata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ht.scada.common.tag.entity.EndTag;
+import com.ht.scada.common.tag.service.EndTagService;
+import com.ht.scada.common.tag.service.TagService;
+import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.oildata.entity.FaultDiagnoseRecord;
-import java.text.SimpleDateFormat;
+import com.ht.scada.oildata.entity.OilWellDailyDataRecord;
+import com.ht.scada.oildata.entity.OilWellHourlyDataRecord;
+import com.ht.scada.oildata.service.ReportService;
+import com.ht.scada.oildata.service.ScheduledService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.inject.Inject;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
- * Created with IntelliJ IDEA.
+ * 定时任务
  *
- * @author: 薄成文 13-5-24 下午11:44
- * To change this template use File | Settings | File Templates.
+ * @author 赵磊
  */
 @Component
 public class Scheduler {
-
-    private ScheduledExecutorService executorService;
     private ObjectMapper objectMapper = new ObjectMapper();
     @Inject
     private StringRedisTemplate redisTemplate;
-    // todo 自动注入各种服务类接口
-    
-    private int interval = 3;//分钟间隔
+    @Autowired
+    @Qualifier("scheduledService1")
+    private ScheduledService scheduledService;
+    @Autowired
+    private EndTagService endTagService;
+    @Autowired
+    private ReportService reportService;
 
-    @PostConstruct
-    public void init() {
-        executorService = Executors.newScheduledThreadPool(2);
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Calendar now = Calendar.getInstance();
-        long delay = interval*60 - ((now.getTimeInMillis()/1000) % 60);
-        System.out.println(sdf.format(now.getTime()));
-        System.out.println(delay);
-        // 从下个整点开始每隔1小时计算一次功图数据
-        executorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                // todo 计算功图数据并写入数据库、生成功图图片、故障诊断
-            	System.out.println("现在时刻：" + new Date().toString());
+    /**
+     *
+     */
+    @Scheduled(cron = "30 9/10 * * * ? ")
+    //@Scheduled(cron = "30 0/1 * * * ? ")
+    public void hourlyTask() {
+        List<EndTag> endTagList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if(endTagList != null && !endTagList.isEmpty()) {
+            for(EndTag endTag : endTagList) {
+                OilWellHourlyDataRecord oilWellHourlyDataRecord = scheduledService.getOilWellHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
+                reportService.insertOilWellHourlyDataRecord(oilWellHourlyDataRecord);
+                System.out.println( new Date().toString() + "写入时记录"+endTag.getCode()+"成功！");
             }
-        }, delay, interval*60, TimeUnit.SECONDS);
+        }
+        System.out.println("现在时刻：" + new Date().toString());
+    }
+    
+    @Scheduled(cron = "5 0 0 * * ? ")
+    public void dailyTask() {
+        List<EndTag> endTagList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if(endTagList != null && !endTagList.isEmpty()) {
+            for(EndTag endTag : endTagList) {
+                OilWellDailyDataRecord oilWellDailyDataRecord = scheduledService.getYesterdayOilWellDailyDataRecordByCode(endTag.getCode());
+                reportService.insertOilWellDailyDataRecord(oilWellDailyDataRecord);
+                System.out.println( new Date().toString() + "写入日记录"+endTag.getCode()+"成功！");
+            }
+        }
     }
 
     private void sendFaultData(FaultDiagnoseRecord record) throws JsonProcessingException {
         String message = objectMapper.writeValueAsString(record);
         redisTemplate.convertAndSend("FaultDiagnoseChannel", message);
-    }
-
-    @PreDestroy
-    private void destroy() {
-        executorService.shutdownNow();
     }
 }

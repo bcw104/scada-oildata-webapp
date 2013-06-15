@@ -9,6 +9,7 @@
 	xmlns:tx="http://www.springframework.org/schema/tx"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" 
 	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+        xmlns:task="http://www.springframework.org/schema/task"
     xmlns:jms="http://www.springframework.org/schema/jms"
     xmlns:cache="http://www.springframework.org/schema/cache"
     xmlns:util="http://www.springframework.org/schema/util"
@@ -22,6 +23,8 @@
 		http://www.springframework.org/schema/jms/spring-jms-3.2.xsd
 		http://www.springframework.org/schema/cache 
 		http://www.springframework.org/schema/cache/spring-cache.xsd
+                http://www.springframework.org/schema/task
+                http://www.springframework.org/schema/task/spring-task-3.2.xsd
 		http://www.springframework.org/schema/util 
 		http://www.springframework.org/schema/util/spring-util.xsd">
 
@@ -38,7 +41,7 @@
 	<context:annotation-config/>
     <!--<context:component-scan base-package="com.ht.scada.**.entity, com.ht.scada.**.service.impl">-->
 	<context:component-scan base-package="com.ht.scada.common.tag.entity, com.ht.scada.common.tag.dao, com.ht.scada.common.tag.service, com.ht.scada.common.tag.service.impl,
-		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl">
+		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata">
 		<!--<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
 	</context:component-scan>
         
@@ -46,7 +49,8 @@
 	<!--<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager" p:cacheManager-ref="ehcache" />-->
 	<!-- cacheManager工厂类，指定ehcache.xml的位置 -->
 	<!--<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:configLocation="classpath:/ehcache.xml" />-->
-        
+        <!--定时任务 -->
+        <task:annotation-driven/>
 	<!-- 启动运行 -->
-	<bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="init"></bean>
+	<!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="init"></bean>-->
 </beans>

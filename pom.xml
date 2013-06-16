@@ -271,7 +271,7 @@
     </dependencies>
 
     <build>
-        <finalName>scada-webapp</finalName>
+        <finalName>scada-oildata-webapp</finalName>
         <plugins>
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>

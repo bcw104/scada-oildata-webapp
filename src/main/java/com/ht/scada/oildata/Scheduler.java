@@ -52,8 +52,8 @@ public class Scheduler {
     /**
      *
      */
-    @Scheduled(cron = "30 9/10 * * * ? ")
-//    @Scheduled(cron = "30 0/1 * * * ? ")
+ @Scheduled(cron = "30 4/5 * * * ? ")
+// @Scheduled(cron = "30 0/1 * * * ? ")
     public void hourlyTask() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -74,8 +74,8 @@ public class Scheduler {
             }
         }
         //天然气井
-        //String trqType = EndTagTypeEnum.TIAN_RAN_QI_JING.toString();
-        List<EndTag> gasList = endTagService.getByType("TIAN_RAN_QI_JING");
+        String trqType = EndTagTypeEnum.TIAN_RAN_QI_JING.toString();
+        List<EndTag> gasList = endTagService.getByType(trqType);
         if (gasList != null && !gasList.isEmpty()) {
             for (EndTag endTag : gasList) {
                 GasWellHourlyDataRecord record = scheduledService.getGasWellHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
@@ -126,8 +126,7 @@ public class Scheduler {
             }
         }
         //天然气井
-        //EndTagTypeEnum.TIAN_RAN_QI_JING.toString()
-        List<EndTag> gasWellList = endTagService.getByType("TIAN_RAN_QI_JING");
+        List<EndTag> gasWellList = endTagService.getByType(EndTagTypeEnum.TIAN_RAN_QI_JING.toString());
         if (gasWellList != null && !gasWellList.isEmpty()) {
             for (EndTag endTag : gasWellList) {
                 GasWellDailyDataRecord record = scheduledService.getYesterdayGasWellDailyDataRecordByCode(endTag.getCode());

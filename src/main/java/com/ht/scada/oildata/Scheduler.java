@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
+
 import com.ht.scada.oildata.entity.FaultDiagnoseRecord;
 import com.ht.scada.oildata.entity.GasWellDailyDataRecord;
 import com.ht.scada.oildata.entity.GasWellHourlyDataRecord;
@@ -51,8 +52,8 @@ public class Scheduler {
     /**
      *
      */
-    //@Scheduled(cron = "30 9/10 * * * ? ")
-    @Scheduled(cron = "30 0/1 * * * ? ")
+    @Scheduled(cron = "30 9/10 * * * ? ")
+//    @Scheduled(cron = "30 0/1 * * * ? ")
     public void hourlyTask() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -73,8 +74,8 @@ public class Scheduler {
             }
         }
         //天然气井
-//        System.out.println(EndTagTypeEnum.TIAN_RAN_QI_JING.toString());
-        List<EndTag> gasList = endTagService.getByType("TIAN_RAN_QI_JING");       
+        //String trqType = EndTagTypeEnum.TIAN_RAN_QI_JING.toString();
+        List<EndTag> gasList = endTagService.getByType("TIAN_RAN_QI_JING");
         if (gasList != null && !gasList.isEmpty()) {
             for (EndTag endTag : gasList) {
                 GasWellHourlyDataRecord record = scheduledService.getGasWellHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
@@ -125,7 +126,8 @@ public class Scheduler {
             }
         }
         //天然气井
-         List<EndTag> gasWellList = endTagService.getByType(EndTagTypeEnum.TIAN_RAN_QI_JING.toString());
+        //EndTagTypeEnum.TIAN_RAN_QI_JING.toString()
+        List<EndTag> gasWellList = endTagService.getByType("TIAN_RAN_QI_JING");
         if (gasWellList != null && !gasWellList.isEmpty()) {
             for (EndTag endTag : gasWellList) {
                 GasWellDailyDataRecord record = scheduledService.getYesterdayGasWellDailyDataRecordByCode(endTag.getCode());
@@ -134,7 +136,7 @@ public class Scheduler {
             }
         }
         //增压站
-         List<EndTag> zyzList = endTagService.getByType(EndTagTypeEnum.ZENG_YA_ZHAN.toString());
+        List<EndTag> zyzList = endTagService.getByType(EndTagTypeEnum.ZENG_YA_ZHAN.toString());
         if (zyzList != null && !zyzList.isEmpty()) {
             for (EndTag endTag : zyzList) {
                 ZengYaZhanDailyDataRecord record = scheduledService.getYesterdayZengYaZhanDailyDataRecordByCode(endTag.getCode());

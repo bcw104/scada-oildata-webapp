@@ -17,7 +17,7 @@
 	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean"> 
 		<property name="dataSource" ref="dataSource"/>
 		<property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter"/>
-		<property name="packagesToScan" value="com.ht.scada.**.entity, com.ht.scada.common.tag.type"/>
+		<property name="packagesToScan" value="com.ht.scada.common.tag.entity, com.ht.scada.oildata.entity"/>
 		<property name="jpaProperties">
 			<props>
 				<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
@@ -35,7 +35,7 @@
     </bean>
 
 	<!-- Spring Data Jpa配置 -->
- 	<jpa:repositories base-package="com.ht.scada.**.dao"
+ 	<jpa:repositories base-package="com.ht.scada.common.tag.dao, com.ht.scada.oildata.dao"
                       transaction-manager-ref="transactionManager"
                       entity-manager-factory-ref="entityManagerFactory"/>
 	<bean class="org.springframework.orm.hibernate4.HibernateExceptionTranslator" />
@@ -104,7 +104,7 @@
 	<beans profile="development">
 		<context:property-placeholder ignore-resource-not-found="true"
 			location="classpath*:/redis.properties,
-			        classpath*:/application.properties,
+			    classpath*:/application.properties,
           			  classpath*:/application.development.properties" />	
           			  
 		<!-- DBCP连接池 -->

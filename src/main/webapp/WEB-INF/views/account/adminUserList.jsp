@@ -19,7 +19,7 @@
 		<c:forEach items="${users}" var="user">
 			<tr>
 				<td><a href="${ctx}/admin/user/update/${user.id}">${user.loginName}</a></td>
-				<td>${user.text}</td>
+				<td>${user.name}</td>
 				<td>
 					<fmt:formatDate value="${user.registerDate}" pattern="yyyy年MM月dd日  HH时mm分ss秒" />
 				</td>

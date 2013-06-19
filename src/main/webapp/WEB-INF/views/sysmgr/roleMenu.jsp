@@ -80,7 +80,7 @@
                     var it = {};
                     it.id = json[i].id;
                     it.data = [];
-                    it.data.push(json[i].name);
+                    it.data.push(json[i].text);
                     it.data.push(json[i].description);
                     item.rows.push(it);
                 }
@@ -104,7 +104,7 @@
             function creatToolbar() {
                 toolbar = dhxLayout.cells("a").attachToolbar();
                 toolbar.setIconsPath("${ctx}/static/dhtmlx/imgs/");
-                toolbar.addText("title",1,"用户角色-${role.name}");
+                toolbar.addText("title",1,"用户角色-${role.text}");
                 toolbar.addButton("save", 2, "保存", 'filesave.png');
                 toolbar.addButton("cancel", 3, "返回", 'filesave.png');
                 toolbar.addSpacer("title");

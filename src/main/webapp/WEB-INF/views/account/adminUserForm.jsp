@@ -31,7 +31,7 @@
 			<div class="control-group">
 				<label class="control-label">用户名:</label>
 				<div class="controls">
-					<input type="text" id="name" name="name" value="${user.name}" class="input-large required"/>
+					<input type="text" id="name" name="name" value="${user.text}" class="input-large required"/>
 				</div>
 			</div>
 			<div class="control-group">

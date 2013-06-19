@@ -75,7 +75,7 @@ function jsonManage(json){
                 it.id = json[i].id;
                 it.data = [];
                 it.data.push(0);
-                it.data.push(json[i].name);
+                it.data.push(json[i].text);
                 it.data.push(json[i].description);
                 item.rows.push(it);
         }
@@ -106,7 +106,7 @@ function doOnClick(itemId){
         },
         function(data){
           userItem=data;
-          $("#update_roleName").val(data.name);
+          $("#update_roleName").val(data.text);
           $("#update_roleDescription").val(data.description);
           $("#update_roleID").val(data.id);
         });

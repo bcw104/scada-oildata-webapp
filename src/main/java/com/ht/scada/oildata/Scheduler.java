@@ -1,7 +1,7 @@
 package com.ht.scada.oildata;
 
+import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ht.scada.oildata.entity.FaultDiagnoseRecord;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 public class Scheduler {
 
     private ScheduledExecutorService executorService;
-    private ObjectMapper objectMapper = new ObjectMapper();
     @Inject
     private StringRedisTemplate redisTemplate;
     // todo 自动注入各种服务类接口
@@ -45,7 +44,7 @@ public class Scheduler {
     }
 
     private void sendFaultData(FaultDiagnoseRecord record) throws JsonProcessingException {
-        String message = objectMapper.writeValueAsString(record);
+        String message = JSON.toJSONString(record);
         redisTemplate.convertAndSend("FaultDiagnoseChannel", message);
     }
 

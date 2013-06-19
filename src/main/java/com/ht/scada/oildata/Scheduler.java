@@ -105,7 +105,7 @@ public class Scheduler {
         System.out.println("现在时刻：" + new Date().toString());
     }
 
-    @Scheduled(cron = "5 0 0 * * ? ")
+    @Scheduled(cron = "5 0 0/1 * * ? ")
     public void dailyTask() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());

@@ -1,7 +1,6 @@
 package com.ht.scada.oildata;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.alibaba.fastjson.JSON;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
@@ -38,7 +37,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Component
 public class Scheduler {
 
-    private ObjectMapper objectMapper = new ObjectMapper();
     @Inject
     private StringRedisTemplate redisTemplate;
     @Autowired
@@ -163,8 +161,8 @@ public class Scheduler {
         }
     }
 
-    private void sendFaultData(FaultDiagnoseRecord record) throws JsonProcessingException {
-        String message = objectMapper.writeValueAsString(record);
+    private void sendFaultData(FaultDiagnoseRecord record) {
+        String message = JSON.toJSONString(record);
         redisTemplate.convertAndSend("FaultDiagnoseChannel", message);
     }
 }

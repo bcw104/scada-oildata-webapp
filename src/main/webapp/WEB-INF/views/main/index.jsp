@@ -61,7 +61,7 @@ var item=[{id:'a1',name:'实时监控'},
 		function creatAccor() {	
 			dhxAccord =dhxLayout.cells("b").attachAccordion(); 
 			for(var i=0;i<item.length;i++){
-				dhxAccord.addItem(item[i].id,item[i].name);
+				dhxAccord.addItem(item[i].id,item[i].text);
 			}
 		}
 		function creatDataView(){

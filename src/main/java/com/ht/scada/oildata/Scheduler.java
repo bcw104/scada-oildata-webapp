@@ -50,7 +50,7 @@ public class Scheduler {
     /**
      *
      */
- @Scheduled(cron = "30 4/5 * * * ? ")
+ @Scheduled(cron = "30 0/2 * * * ? ")
 // @Scheduled(cron = "30 0/1 * * * ? ")
     public void hourlyTask() {
         //油井

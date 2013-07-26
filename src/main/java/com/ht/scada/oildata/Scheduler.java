@@ -37,7 +37,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Component
 public class Scheduler {
 
-    @Inject
+    //@Inject
     private StringRedisTemplate redisTemplate;
     @Autowired
     @Qualifier("scheduledService1")
@@ -46,18 +46,20 @@ public class Scheduler {
     private EndTagService endTagService;
     @Autowired
     private ReportService reportService;
+    
+    private int interval = 20;  //存储间隔
 
     /**
      *
      */
- @Scheduled(cron = "30 0/2 * * * ? ")
+ @Scheduled(cron = "30 0/20 * * * ? ")
 // @Scheduled(cron = "30 0/1 * * * ? ")
     public void hourlyTask() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (oilWellList != null && !oilWellList.isEmpty()) {
             for (EndTag endTag : oilWellList) {
-                OilWellHourlyDataRecord oilWellHourlyDataRecord = scheduledService.getOilWellHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
+                OilWellHourlyDataRecord oilWellHourlyDataRecord = scheduledService.getOilWellHourlyDataRecordByCode(endTag.getCode(), interval, new Date());
                 reportService.insertOilWellHourlyDataRecord(oilWellHourlyDataRecord);
                 System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
             }
@@ -66,7 +68,7 @@ public class Scheduler {
         List<EndTag> waterList = endTagService.getByType(EndTagTypeEnum.SHUI_YUAN_JING.toString());
         if (waterList != null && !waterList.isEmpty()) {
             for (EndTag endTag : waterList) {
-                WaterWellHourlyDataRecord record = scheduledService.getWaterWellHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
+                WaterWellHourlyDataRecord record = scheduledService.getWaterWellHourlyDataRecordByCode(endTag.getCode(), interval, new Date());
                 reportService.insertWaterWellHourlyDataRecord(record);
                 System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
             }
@@ -76,7 +78,7 @@ public class Scheduler {
         List<EndTag> gasList = endTagService.getByType(trqType);
         if (gasList != null && !gasList.isEmpty()) {
             for (EndTag endTag : gasList) {
-                GasWellHourlyDataRecord record = scheduledService.getGasWellHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
+                GasWellHourlyDataRecord record = scheduledService.getGasWellHourlyDataRecordByCode(endTag.getCode(), interval, new Date());
                 reportService.insertGasWellHourlyDataRecord(record);
                 System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
             }
@@ -85,7 +87,7 @@ public class Scheduler {
         List<EndTag> zhuShuiList = endTagService.getByType(EndTagTypeEnum.ZHU_SHUI_ZHAN.toString());
         if (zhuShuiList != null && !zhuShuiList.isEmpty()) {
             for (EndTag endTag : zhuShuiList) {
-                ZhuShuiHourlyDataRecord record = scheduledService.getZhuShuiHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
+                ZhuShuiHourlyDataRecord record = scheduledService.getZhuShuiHourlyDataRecordByCode(endTag.getCode(), interval, new Date());
                 reportService.insertZhuShuiHourlyDataRecord(record);
                 System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
             }
@@ -94,7 +96,7 @@ public class Scheduler {
         List<EndTag> zhuQiList = endTagService.getByType(EndTagTypeEnum.ZHU_QI_ZHAN.toString());
         if (zhuQiList != null && !zhuQiList.isEmpty()) {
             for (EndTag endTag : zhuQiList) {
-                ZhuQiHourlyDataRecord record = scheduledService.getZhuQiHourlyDataRecordByCode(endTag.getCode(), 10, new Date());
+                ZhuQiHourlyDataRecord record = scheduledService.getZhuQiHourlyDataRecordByCode(endTag.getCode(), interval, new Date());
                 reportService.insertZhuQiHourlyDataRecord(record);
                 System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
             }

@@ -41,7 +41,7 @@
 	<context:annotation-config/>
     <!--<context:component-scan base-package="com.ht.scada.**.entity, com.ht.scada.**.service.impl">-->
 	<context:component-scan base-package="com.ht.scada.common.tag.entity, com.ht.scada.common.tag.dao, com.ht.scada.common.tag.service, com.ht.scada.common.tag.service.impl,
-		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata">
+		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata, com.ht.scada.data.service, com.ht.scada.data.service.impl">
 		<!--<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
 	</context:component-scan>
         

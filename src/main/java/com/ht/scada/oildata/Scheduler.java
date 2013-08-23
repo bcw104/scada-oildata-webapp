@@ -1,17 +1,34 @@
 package com.ht.scada.oildata;
 
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
 import com.alibaba.fastjson.JSON;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
-
+import com.ht.scada.common.tag.util.VarGroupEnum;
+import com.ht.scada.common.tag.util.VarSubTypeEnum;
+import com.ht.scada.data.service.RealtimeDataService;
+import com.ht.scada.oildata.dao.TestSGTDao;
 import com.ht.scada.oildata.entity.FaultDiagnoseRecord;
 import com.ht.scada.oildata.entity.GasWellDailyDataRecord;
 import com.ht.scada.oildata.entity.GasWellHourlyDataRecord;
 import com.ht.scada.oildata.entity.OilWellDailyDataRecord;
 import com.ht.scada.oildata.entity.OilWellHourlyDataRecord;
+import com.ht.scada.oildata.entity.TestSGT;
 import com.ht.scada.oildata.entity.WaterWellDailyDataRecord;
 import com.ht.scada.oildata.entity.WaterWellHourlyDataRecord;
+import com.ht.scada.oildata.entity.WellData;
 import com.ht.scada.oildata.entity.ZengYaZhanDailyDataRecord;
 import com.ht.scada.oildata.entity.ZhuQiDailyDataRecord;
 import com.ht.scada.oildata.entity.ZhuQiHourlyDataRecord;
@@ -19,15 +36,7 @@ import com.ht.scada.oildata.entity.ZhuShuiDailyDataRecord;
 import com.ht.scada.oildata.entity.ZhuShuiHourlyDataRecord;
 import com.ht.scada.oildata.service.ReportService;
 import com.ht.scada.oildata.service.ScheduledService;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
-
-import javax.inject.Inject;
-import java.util.Date;
-import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Scheduled;
+import com.ht.scada.oildata.util.String2FloatArrayUtil;
 
 /**
  * 定时任务
@@ -37,8 +46,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Component
 public class Scheduler {
 
-    @Inject
-    private StringRedisTemplate redisTemplate;
     @Autowired
     @Qualifier("scheduledService1")
     private ScheduledService scheduledService;
@@ -46,12 +53,15 @@ public class Scheduler {
     private EndTagService endTagService;
     @Autowired
     private ReportService reportService;
+    @Autowired
+    private TestSGTDao testSGTDao;
+    @Autowired
+	private RealtimeDataService realtimeDataService;
 
     /**
      *
      */
- @Scheduled(cron = "30 0/2 * * * ? ")
-// @Scheduled(cron = "30 0/1 * * * ? ")
+    //@Scheduled(cron = "30 0/2 * * * ? ")
     public void hourlyTask() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -103,7 +113,7 @@ public class Scheduler {
         System.out.println("现在时刻：" + new Date().toString());
     }
 
-    @Scheduled(cron = "5 0 0 * * ? ")
+    //@Scheduled(cron = "5 0 0 * * ? ")
     public void dailyTask() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -160,9 +170,50 @@ public class Scheduler {
             }
         }
     }
-
+   
+    @Scheduled(cron = "0 0/1 * * * ? ")
+    public void testSGT() {
+    	
+    	Map<String, String> map = realtimeDataService.getEndTagVarGroupInfo("test_001", VarGroupEnum.YOU_JING_SGT.toString());
+		if(map != null) {
+			TestSGT testSGT = new TestSGT();
+			testSGT.setChongCheng(Float.valueOf(map.get(VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase())));
+			testSGT.setChongCi(Float.valueOf(map.get(VarSubTypeEnum.CHONG_CI.toString().toLowerCase())));
+			testSGT.setChongCiShang(Float.valueOf(map.get(VarSubTypeEnum.SHANG_XING_CHONG_CI.toString().toLowerCase())));
+			testSGT.setChongCiXia(Float.valueOf(map.get(VarSubTypeEnum.XIA_XING_CHONG_CI.toString().toLowerCase())));
+			testSGT.setMinZaihe(Float.valueOf(map.get(VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase())));
+			testSGT.setMaxZaihe(Float.valueOf(map.get(VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase())));
+			
+			String weiyi = realtimeDataService.getEndTagVarYcArray("test_001" ,VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
+			String zaihe = realtimeDataService.getEndTagVarYcArray("test_001" ,VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase());
+			
+			testSGT.setWeiyi(weiyi);
+			testSGT.setZaihe(zaihe);
+			testSGT.setDate(new Date());
+			float[] weiyiArray = String2FloatArrayUtil.string2FloatArrayUtil(weiyi, ",");
+			float[] zaiheArray = String2FloatArrayUtil.string2FloatArrayUtil(zaihe, ",");
+			float weiyiSum = 0, zaiheSum = 0;
+			for(float f : weiyiArray) {
+				weiyiSum += f;
+			}
+			for(float f : zaiheArray) {
+				zaiheSum += f;
+			}
+			testSGT.setWeiyiSum(weiyiSum);
+			testSGT.setZaiheSum(zaiheSum);
+			
+			
+			
+			testSGTDao.save(testSGT);
+			System.out.println("写入功图测试数据成功！");
+		}
+    	
+    	
+    	
+    }
+    
     private void sendFaultData(FaultDiagnoseRecord record) {
         String message = JSON.toJSONString(record);
-        redisTemplate.convertAndSend("FaultDiagnoseChannel", message);
+        //redisTemplate.convertAndSend("FaultDiagnoseChannel", message);
     }
 }

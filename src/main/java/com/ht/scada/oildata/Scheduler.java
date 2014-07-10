@@ -1,42 +1,28 @@
 package com.ht.scada.oildata;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import javax.inject.Inject;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-
 import com.alibaba.fastjson.JSON;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
+import com.ht.scada.common.tag.util.CommonUtils;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.VarGroupEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.oildata.dao.TestSGTDao;
-import com.ht.scada.oildata.entity.FaultDiagnoseRecord;
-import com.ht.scada.oildata.entity.GasWellDailyDataRecord;
-import com.ht.scada.oildata.entity.GasWellHourlyDataRecord;
-import com.ht.scada.oildata.entity.OilWellDailyDataRecord;
-import com.ht.scada.oildata.entity.OilWellHourlyDataRecord;
-import com.ht.scada.oildata.entity.TestSGT;
-import com.ht.scada.oildata.entity.WaterWellDailyDataRecord;
-import com.ht.scada.oildata.entity.WaterWellHourlyDataRecord;
-import com.ht.scada.oildata.entity.WellData;
-import com.ht.scada.oildata.entity.ZengYaZhanDailyDataRecord;
-import com.ht.scada.oildata.entity.ZhuQiDailyDataRecord;
-import com.ht.scada.oildata.entity.ZhuQiHourlyDataRecord;
-import com.ht.scada.oildata.entity.ZhuShuiDailyDataRecord;
-import com.ht.scada.oildata.entity.ZhuShuiHourlyDataRecord;
+import com.ht.scada.oildata.dao.WetkSGTDao;
+import com.ht.scada.oildata.entity.*;
 import com.ht.scada.oildata.service.ReportService;
 import com.ht.scada.oildata.service.ScheduledService;
+import com.ht.scada.oildata.service.WellService;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 定时任务
@@ -57,7 +43,11 @@ public class Scheduler {
     private TestSGTDao testSGTDao;
     @Autowired
     private RealtimeDataService realtimeDataService;
-    
+    @Autowired
+    private WellService wellService;
+    @Autowired
+    private WetkSGTDao wetkSGTDao;
+
     private int interval = 20;  //存储间隔
 
     /**
@@ -115,12 +105,124 @@ public class Scheduler {
                 System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
             }
         }
+        //威尔泰克功图
+        List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if (youJingList != null && youJingList.size() > 0) {
+            for (EndTag youJing : youJingList) {
+                String code = youJing.getCode();
+                WellData wellData = wellService.getLatestWellDataByWellNum(code);
+                WetkSGT wetkSGT = new WetkSGT();
+                wetkSGT.setJH(youJing.getCode());
+                wetkSGT.setCJSJ(wellData.getTime());
+                wetkSGT.setCC(wellData.getChongCheng());
+                wetkSGT.setCC1(wellData.getChongCi());
+                //wetkSGT.setSXCC1(); //todo 上行冲次
+                //wetkSGT.setXXCC1(); //todo 下行冲次
+                wetkSGT.setWY(wellData.getWeiyi());
+                wetkSGT.setZH(wellData.getZaihe());
+                // 功率
+                float[] glqx = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), ",");
+                // 电流
+                float[] dlqx = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()), ",");
+                // 变频器输出转矩
+                float[] bpqExportTorque = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), ",");
+                // 变频器输出功率
+                float[] bpqExportPower = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_YIN_SHU_ARRAY.toString().toLowerCase()), ",");
+                wetkSGT.setDL(dlqx);
+                wetkSGT.setGL(glqx);
+                wetkSGT.setBPQSCGL(bpqExportPower);
+                wetkSGT.setZJ(bpqExportTorque);
+                wetkSGT.setZDZH(wellData.getMaxZaihe());
+                wetkSGT.setZXZH(wellData.getMinZaihe());
+                wetkSGT.setBZGT(null); // 暂时为空
+                wetkSGT.setGLYS(getDianYCData(code, VarSubTypeEnum.GV_GLYS.toString().toLowerCase()));
+                wetkSGT.setYGGL(getDianYCData(code, VarSubTypeEnum.GV_YG.toString().toLowerCase()));
+                wetkSGT.setWGGL(getDianYCData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
+                wetkSGTDao.save(wetkSGT); // 持久化
+            }
+        }
 
         System.out.println("现在时刻：" + new Date().toString());
     }
 
+
+    /**
+     * 根据井号和变量名获取实时数据
+     * @param code
+     * @param varName
+     * @return
+     */
+    private float getDianYCData(String code, String varName) {
+        String value = realtimeDataService.getEndTagVarInfo(code, varName);
+        if (value != null && !value.isEmpty()) {
+            return  CommonUtils.string2Float(value, 4); // 保留四位小数
+        } else {
+            return 0;
+        }
+    }
+
     //@Scheduled(cron = "5 0 0 * * ? ")
     public void dailyTask() {
+        //油井
+        List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if (oilWellList != null && !oilWellList.isEmpty()) {
+            for (EndTag endTag : oilWellList) {
+                OilWellDailyDataRecord oilWellDailyDataRecord = scheduledService.getYesterdayOilWellDailyDataRecordByCode(endTag.getCode());
+                reportService.insertOilWellDailyDataRecord(oilWellDailyDataRecord);
+                System.out.println(new Date().toString() + "写入日记录" + endTag.getCode() + "成功！");
+            }
+        }
+        //水源井
+        List<EndTag> waterWellList = endTagService.getByType(EndTagTypeEnum.SHUI_YUAN_JING.toString());
+        if (waterWellList != null && !waterWellList.isEmpty()) {
+            for (EndTag endTag : waterWellList) {
+                WaterWellDailyDataRecord record = scheduledService.getYesterdayWaterWellDailyDataRecordByCode(endTag.getCode());
+                reportService.insertWaterWellDailyDataRecord(record);
+                System.out.println(new Date().toString() + "写入日记录" + endTag.getCode() + "成功！");
+            }
+        }
+        //天然气井
+        List<EndTag> gasWellList = endTagService.getByType(EndTagTypeEnum.TIAN_RAN_QI_JING.toString());
+        if (gasWellList != null && !gasWellList.isEmpty()) {
+            for (EndTag endTag : gasWellList) {
+                GasWellDailyDataRecord record = scheduledService.getYesterdayGasWellDailyDataRecordByCode(endTag.getCode());
+                reportService.insertGasWellDailyDataRecord(record);
+                System.out.println(new Date().toString() + "写入日记录" + endTag.getCode() + "成功！");
+            }
+        }
+        //增压站
+        List<EndTag> zyzList = endTagService.getByType(EndTagTypeEnum.ZENG_YA_ZHAN.toString());
+        if (zyzList != null && !zyzList.isEmpty()) {
+            for (EndTag endTag : zyzList) {
+                ZengYaZhanDailyDataRecord record = scheduledService.getYesterdayZengYaZhanDailyDataRecordByCode(endTag.getCode());
+                reportService.insertZengYaZhanDailyDataRecord(record);
+                System.out.println(new Date().toString() + "写入日记录" + endTag.getCode() + "成功！");
+            }
+        }
+        //注水站
+        List<EndTag> zszList = endTagService.getByType(EndTagTypeEnum.ZHU_SHUI_ZHAN.toString());
+        if (zszList != null && !zszList.isEmpty()) {
+            for (EndTag endTag : zszList) {
+                ZhuShuiDailyDataRecord record = scheduledService.getYesterdayZhuShuiDailyDataRecordByCode(endTag.getCode());
+                reportService.insertZhuShuiDailyDataRecord(record);
+                System.out.println(new Date().toString() + "写入日记录" + endTag.getCode() + "成功！");
+            }
+        }
+        //注汽站
+        List<EndTag> zqzList = endTagService.getByType(EndTagTypeEnum.ZHU_QI_ZHAN.toString());
+        if (zqzList != null && !zqzList.isEmpty()) {
+            for (EndTag endTag : zqzList) {
+                ZhuQiDailyDataRecord record = scheduledService.getYesterdayZhuQiDailyDataRecordByCode(endTag.getCode());
+                reportService.insertZhuQiDailyDataRecord(record);
+                System.out.println(new Date().toString() + "写入日记录" + endTag.getCode() + "成功！");
+            }
+        }
+    }
+
+    /**
+     * 定时给 SCY_SGT_GTCJ 写功图数据
+     */
+    public void dailyTask2() {
         //油井
         List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (oilWellList != null && !oilWellList.isEmpty()) {

@@ -41,7 +41,8 @@
     <context:annotation-config/>
     <!--<context:component-scan base-package="com.ht.scada.**.entity, com.ht.scada.**.service.impl">-->
     <context:component-scan base-package="com.ht.scada.common.tag.entity, com.ht.scada.common.tag.dao, com.ht.scada.common.tag.service, com.ht.scada.common.tag.service.impl,
-		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata, com.ht.scada.data.service, com.ht.scada.data.service.impl">
+		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata, com.ht.scada.data.service, com.ht.scada.data.service.impl
+		, com.ht.scada.security.entity">
         <!--<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
     </context:component-scan>
         
@@ -51,6 +52,17 @@
     <!--<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:configLocation="classpath:/ehcache.xml" />-->
     <!--定时任务 -->
     <task:annotation-driven/>
+
+    <bean id="quirks" class="org.sql2o.quirks.OracleQuirks" />
+    <bean id="sql2o" class="org.sql2o.Sql2o" >
+        <constructor-arg ref="dataSource"/>
+        <constructor-arg ref="quirks"/>
+        <!--<property name="dataSource" ref="dataSource"></property>-->
+    </bean>
+    <!--<bean id="sql2o" class="org.sql2o.Sql2o" >-->
+        <!--<constructor-arg ref="dataSource"></constructor-arg>-->
+    <!--</bean>-->
+
     <!-- 启动运行 -->
-    <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="init"></bean>-->
+    <bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="hourlyTask"/>
 </beans>

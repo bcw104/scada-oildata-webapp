@@ -47,7 +47,8 @@ public class Scheduler {
     /**
      *
      */
-    @Scheduled(cron = "30 0 0 * * ? ")
+    //@Scheduled(cron = "30 0 0 * * ? ")
+    @Scheduled(cron="0 0/2 * * * ? ")
     public void hourlyTask() {
         //油井
         //List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -100,48 +101,61 @@ public class Scheduler {
         //        System.out.println(new Date().toString() + "写入时记录" + endTag.getCode() + "成功！");
         //    }
         //}
+
         //威尔泰克功图
+        // 功图id(32位随机数)
+        String gtId;
+
         Map<String, String> dateMap = new HashMap<String, String>();
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
-            //for (EndTag youJing : youJingList) {
-            //    String code = youJing.getCode();
-                String code = "GD1-15X819";
-                String newDateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
-                if(dateMap.get(code) != null && dateMap.get(code).equals(newDateTime)) {
-                     return;
-                }
-                dateMap.put(code, newDateTime);
-                WetkSGT wetkSGT = new WetkSGT();
-                wetkSGT.setJH(code);
-                String dateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
-                if (dateTime!=null){
-                    wetkSGT.setCJSJ(CommonUtils.string2Date(dateTime));
-                }else {
-                    wetkSGT.setCJSJ(new Date());
-                }
-                wetkSGT.setCC(getDianYCData(code,VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase()));
-                wetkSGT.setCC1(getDianYCData(code,VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
-                wetkSGT.setSXCC1(0); //todo 上行冲次
-                wetkSGT.setXXCC1(0); //todo 下行冲次
-                wetkSGT.setWY(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()));
-                wetkSGT.setZH(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()));
-                wetkSGT.setGL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()));
-                wetkSGT.setDL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()));
-                wetkSGT.setBPQSCGL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.BIAN_PIN_QI_SHU_CHU_PIN_LV.toString().toLowerCase()));
-                wetkSGT.setZJ(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_GONG_TU_ARRAY.toString().toLowerCase()));
-                wetkSGT.setZDZH(getDianYCData(code,VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()));
-                wetkSGT.setZXZH(getDianYCData(code,VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase()));
-                wetkSGT.setBZGT(null); // 暂时为空
-                wetkSGT.setGLYS(getDianYCData(code, VarSubTypeEnum.GV_GLYS.toString().toLowerCase()));
-                wetkSGT.setYGGL(getDianYCData(code, VarSubTypeEnum.GV_YG.toString().toLowerCase()));
-                wetkSGT.setWGGL(getDianYCData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
+            for (EndTag youJing : youJingList) {
+                String code = youJing.getCode();
+                if (getDianYCData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
+                    String newDateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
+                    if (dateMap.get(code) != null && dateMap.get(code).equals(newDateTime)) {
+                        return;
+                    }
+                    dateMap.put(code, newDateTime);
+                    WetkSGT wetkSGT = new WetkSGT();
+                    gtId = CommonUtils.getCode();
+                    wetkSGT.setID(gtId);
+                    wetkSGT.setJH(code);
+                    String dateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
+                    if (dateTime != null){
+                        wetkSGT.setCJSJ(CommonUtils.string2Date(dateTime));
+                    }else {
+                        wetkSGT.setCJSJ(new Date());
+                    }
+                    wetkSGT.setCC(getDianYCData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase()));
+                    wetkSGT.setCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
+                    wetkSGT.setSXCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase())); //todo 上行冲次，暂时与冲次值相同
+                    wetkSGT.setXXCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase())); //todo 下行冲次，暂时与冲次值相同
+                    wetkSGT.setWY(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()));
+                    wetkSGT.setZH(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()));
+                    wetkSGT.setGL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()));
+                    wetkSGT.setDL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()));
+                    wetkSGT.setBPQSCGL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_YIN_SHU_ARRAY.toString().toLowerCase()));
+                    wetkSGT.setZJ(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_GONG_TU_ARRAY.toString().toLowerCase()));
+                    wetkSGT.setZDZH(getDianYCData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()));
+                    wetkSGT.setZXZH(getDianYCData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase()));
+                    wetkSGT.setBZGT(null); // 暂时为空
+                    wetkSGT.setGLYS(getDianYCData(code, VarSubTypeEnum.GV_GLYS.toString().toLowerCase()));
+                    wetkSGT.setYGGL(getDianYCData(code, VarSubTypeEnum.GV_YG.toString().toLowerCase()));
+                    wetkSGT.setWGGL(getDianYCData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
 
-                wetkSGTService.addOneRecord(wetkSGT); // 持久化
-            //}
+                    wetkSGTService.addOneRecord(wetkSGT); // 持久化
+                    if (dateTime != null){
+                        wetkSGTService.addOneGTFXRecord(gtId,code,CommonUtils.string2Date(dateTime)); // 功图分析表持久化数据
+
+                    }else {
+                        wetkSGTService.addOneGTFXRecord(gtId,code,new Date()); // 功图分析表持久化数据
+                    }
+                }
+            }
         }
 
-        System.out.println("现在时刻：" + new Date().toString());
+        System.out.println("现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
 

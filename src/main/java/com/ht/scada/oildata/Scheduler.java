@@ -48,7 +48,7 @@ public class Scheduler {
      *
      */
     //@Scheduled(cron = "30 0 0 * * ? ")
-    @Scheduled(cron="0 0/2 * * * ? ")
+    @Scheduled(cron="0 0/30 * * * ? ")
     public void hourlyTask() {
         //油井
         //List<EndTag> oilWellList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -105,6 +105,11 @@ public class Scheduler {
         //威尔泰克功图
         // 功图id(32位随机数)
         String gtId;
+        float CC;
+        float CC1;
+        float ZDZH;
+        float ZXZH;
+
 
         Map<String, String> dateMap = new HashMap<String, String>();
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -119,6 +124,10 @@ public class Scheduler {
                     dateMap.put(code, newDateTime);
                     WetkSGT wetkSGT = new WetkSGT();
                     gtId = CommonUtils.getCode();
+                    CC = getDianYCData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());
+                    CC1 = getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase());
+                    ZDZH = getDianYCData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase());
+                    ZXZH = getDianYCData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase());
                     wetkSGT.setID(gtId);
                     wetkSGT.setJH(code);
                     String dateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
@@ -127,30 +136,44 @@ public class Scheduler {
                     }else {
                         wetkSGT.setCJSJ(new Date());
                     }
-                    wetkSGT.setCC(getDianYCData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase()));
-                    wetkSGT.setCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
+                    wetkSGT.setCC(CC); // 冲程
+                    wetkSGT.setCC1(CC1); // 冲次
                     wetkSGT.setSXCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase())); //todo 上行冲次，暂时与冲次值相同
                     wetkSGT.setXXCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase())); //todo 下行冲次，暂时与冲次值相同
-                    wetkSGT.setWY(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()));
-                    wetkSGT.setZH(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()));
-                    wetkSGT.setGL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()));
-                    wetkSGT.setDL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()));
-                    wetkSGT.setBPQSCGL(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_YIN_SHU_ARRAY.toString().toLowerCase()));
-                    wetkSGT.setZJ(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_GONG_TU_ARRAY.toString().toLowerCase()));
-                    wetkSGT.setZDZH(getDianYCData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()));
-                    wetkSGT.setZXZH(getDianYCData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase()));
+                    String weiyi = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
+                    weiyi = CommonUtils.string2String(weiyi, 3);
+                    wetkSGT.setWY(weiyi);
+                    wetkSGT.setZH(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), 3));
+                    wetkSGT.setGL(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), 3));
+                    wetkSGT.setDL(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()), 3));
+                    wetkSGT.setBPQSCGL(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_YIN_SHU_ARRAY.toString().toLowerCase()), 3));
+                    wetkSGT.setZJ(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_GONG_TU_ARRAY.toString().toLowerCase()), 3));
+                    wetkSGT.setZDZH(ZDZH);// 最大载荷
+                    wetkSGT.setZXZH(ZXZH); // 最小载荷
                     wetkSGT.setBZGT(null); // 暂时为空
                     wetkSGT.setGLYS(getDianYCData(code, VarSubTypeEnum.GV_GLYS.toString().toLowerCase()));
                     wetkSGT.setYGGL(getDianYCData(code, VarSubTypeEnum.GV_YG.toString().toLowerCase()));
                     wetkSGT.setWGGL(getDianYCData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
 
                     wetkSGTService.addOneRecord(wetkSGT); // 持久化
+
+                    //Map<String, Object> gtfxMap = new HashMap<>();
+                    //gtfxMap.put("JH", code);
+
                     if (dateTime != null){
-                        wetkSGTService.addOneGTFXRecord(gtId,code,CommonUtils.string2Date(dateTime)); // 功图分析表持久化数据
+                        //gtfxMap.put("CJSJ", CommonUtils.string2Date(dateTime));
+                        wetkSGTService.addOneGTFXRecord(gtId,code,CommonUtils.string2Date(dateTime),CC,CC1,ZDZH,ZXZH); // 功图分析表持久化数据
 
                     }else {
-                        wetkSGTService.addOneGTFXRecord(gtId,code,new Date()); // 功图分析表持久化数据
+                        //gtfxMap.put("CJSJ", new Date());
+                        wetkSGTService.addOneGTFXRecord(gtId,code,new Date(),CC,CC1,ZDZH,ZXZH); // 功图分析表持久化数据
                     }
+                    //
+                    //gtfxMap.put("GTID", gtId);
+                    //gtfxMap.put("CC", CC);
+                    //gtfxMap.put("CC1", CC1);
+                    //gtfxMap.put("ZDZH", ZDZH);
+                    //gtfxMap.put("ZXZH", ZXZH);
                 }
             }
         }

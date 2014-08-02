@@ -36,8 +36,8 @@
 
     <!-- Spring Data Jpa配置 -->
     <jpa:repositories base-package="com.ht.scada.**.dao,com.ht.scada.**.service.impl"
-                          transaction-manager-ref="transactionManager"
-                          entity-manager-factory-ref="entityManagerFactory"/>
+                      transaction-manager-ref="transactionManager"
+                      entity-manager-factory-ref="entityManagerFactory"/>
     <bean class="org.springframework.orm.hibernate4.HibernateExceptionTranslator" />
     <bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect" />
 
@@ -57,26 +57,22 @@
     <!-- cacheManager工厂类，指定ehcache.xml的位置 -->
     <!--<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:configLocation="classpath:/ehcache.xml" />-->
 
-    <!-- local development环境 -->
-    <beans profile="development">
-        <context:property-placeholder ignore-resource-not-found="true"
-                                      location="classpath*:/redis.properties,
-			        classpath*:/config.properties"/>
-
-        <!-- DBCP连接池 -->
-        <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
-            <!-- 基本属性 url、user、password -->
-            <property name="url" value="jdbc:oracle:thin:@10.67.169.183:1521:orcl"/>
-            <property name="username" value="admin"/>
-            <property name="password" value="dltx_212"/>
-            <!-- 配置初始化大小、最小、最大 -->
-            <property name="initialSize" value="1"/>
-            <property name="minIdle" value="1"/>
-            <property name="maxActive" value="20"/>
-
-            <!-- 配置监控统计拦截的filters -->
-            <property name="filters" value="stat,slf4j"/>
-        </bean>
-    </beans>
+        
+    <!-- 数据源配置, 使用DBCP数据库连接池 -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <!-- Connection Info -->
+        <property name="driverClassName" value="${jdbc.driver}" />
+        <property name="url" value="${jdbc.url}" />
+        <property name="username" value="${jdbc.username}" />
+        <property name="password" value="${jdbc.password}" />
+		
+        <!-- Connection Pooling Info -->
+        <property name="maxActive" value="${dbcp.maxActive}" />
+        <property name="maxIdle" value="${dbcp.maxIdle}" />
+        <property name="defaultAutoCommit" value="false" />
+        <!-- 连接Idle一个小时后超时 -->
+        <property name="timeBetweenEvictionRunsMillis" value="3600000" />
+        <property name="minEvictableIdleTimeMillis" value="3600000" />
+    </bean>
 
 </beans>

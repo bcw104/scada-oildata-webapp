@@ -105,11 +105,7 @@ public class Scheduler {
         //威尔泰克功图
         // 功图id(32位随机数)
         String gtId;
-        float CC;
-        float CC1;
-        float ZDZH;
-        float ZXZH;
-
+        float CC,CC1,ZDZH,ZXZH;
 
         Map<String, String> dateMap = new HashMap<String, String>();
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -140,9 +136,7 @@ public class Scheduler {
                     wetkSGT.setCC1(CC1); // 冲次
                     wetkSGT.setSXCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase())); //todo 上行冲次，暂时与冲次值相同
                     wetkSGT.setXXCC1(getDianYCData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase())); //todo 下行冲次，暂时与冲次值相同
-                    String weiyi = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
-                    weiyi = CommonUtils.string2String(weiyi, 3);
-                    wetkSGT.setWY(weiyi);
+                    wetkSGT.setWY(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), 3));
                     wetkSGT.setZH(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), 3));
                     wetkSGT.setGL(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), 3));
                     wetkSGT.setDL(CommonUtils.string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()), 3));

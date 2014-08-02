@@ -69,7 +69,7 @@
         <!-- Connection Pooling Info -->
         <property name="maxActive" value="${dbcp.maxActive}" />
         <property name="maxIdle" value="${dbcp.maxIdle}" />
-        <property name="defaultAutoCommit" value="false" />
+        <property name="defaultAutoCommit" value="true" />
         <!-- 连接Idle一个小时后超时 -->
         <property name="timeBetweenEvictionRunsMillis" value="3600000" />
         <property name="minEvictableIdleTimeMillis" value="3600000" />

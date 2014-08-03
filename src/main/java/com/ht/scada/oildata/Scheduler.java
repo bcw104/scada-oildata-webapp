@@ -3,14 +3,22 @@ package com.ht.scada.oildata;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
+import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
+import com.ht.scada.oildata.calc.GTDataComputerProcess;
+import com.ht.scada.oildata.calc.GTReturnKeyEnum;
 import com.ht.scada.oildata.entity.WetkSGT;
+import com.ht.scada.oildata.model.WellInfoWrapper;
 import com.ht.scada.oildata.service.ReportService;
+import com.ht.scada.oildata.service.WellInfoService;
 import com.ht.scada.oildata.service.WellService;
 import com.ht.scada.oildata.service.WetkSGTService;
+import com.ht.scada.oildata.util.String2FloatArrayUtil;
+import java.math.BigDecimal;
+import java.util.Calendar;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -19,6 +27,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.LocalDateTime;
 
 /**
  * 定时任务
@@ -41,17 +50,18 @@ public class Scheduler {
     private WellService wellService;
     @Autowired
     private WetkSGTService wetkSGTService;
+    @Autowired
+    private WellInfoService wellInfoService;
+    private Map<String, String> dateMap = new HashMap<String, String>();
+    private Map<String, String> myDateMap = new HashMap<String, String>();
 
-    private Map<String, String> dateMap = new HashMap<String, String>();;
-
-    @Scheduled(cron="* 0/10 * * * ? ")
-    public void hourlyTask() {
-        System.out.println("现在时刻：" + CommonUtils.date2String(new Date()));
-        
+    @Scheduled(cron = "0 0/10 * * * ? ")
+    private void hourlyTask() {
+        System.out.println("开启功图计产任务——现在时刻：" + CommonUtils.date2String(new Date()));
         // 功图id(32位随机数)
         String gtId;
-        float CC,CC1,ZDZH,ZXZH;
-         
+        float CC, CC1, ZDZH, ZXZH;
+
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
@@ -59,7 +69,7 @@ public class Scheduler {
                 // 1.判断功图时间是否更新
                 String newDateTime = realtimeDataService.getEndTagVarYcArray(code, RedisKeysEnum.GT_DATETIME.toString());
                 if (dateMap.get(code) != null && dateMap.get(code).equals(newDateTime)) {
-                    return;
+                    continue;
                 }
                 dateMap.put(code, newDateTime);
                 // 2.判断是否有功图
@@ -91,27 +101,181 @@ public class Scheduler {
                     wetkSGT.setWGGL(getDianYCData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
 
                     wetkSGTService.addOneRecord(wetkSGT); // 持久化
-
                     wetkSGTService.addOneGTFXRecord(gtId,code,CommonUtils.string2Date(newDateTime),CC,CC1,ZDZH,ZXZH); // 功图分析表持久化数据
                 }
             }
         }
-        System.out.println("现在时刻：" + CommonUtils.date2String(new Date()));
+        System.out.println("完成功图计产任务——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
-
     /**
-    * 根据井号和变量名获取实时数据
-    * @param code
-    * @param varName
-    * @return
-    */
+     * 根据井号和变量名获取实时数据
+     *
+     * @param code
+     * @param varName
+     * @return
+     */
     private float getDianYCData(String code, String varName) {
         String value = realtimeDataService.getEndTagVarInfo(code, varName);
         if (value != null && !value.isEmpty()) {
-            return  CommonUtils.string2Float(value, 4); // 保留四位小数
+            return CommonUtils.string2Float(value, 4); // 保留四位小数
         } else {
             return 0;
         }
+    }
+
+    @Scheduled(cron = "0 0/10 * * * ? ")
+    private void oilProductCalc() {
+        System.out.println("开启功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+
+        List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if (youJingList != null && youJingList.size() > 0) {
+            for (EndTag youJing : youJingList) {
+                if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
+                    continue;
+                }
+                String code = youJing.getCode();
+                // 1.判断功图时间是否更新
+                String newDateTime = realtimeDataService.getEndTagVarYcArray(code, RedisKeysEnum.GT_DATETIME.toString());
+                if (myDateMap.get(code) != null && myDateMap.get(code).equals(newDateTime)) {
+                    continue;
+                }
+                myDateMap.put(code, newDateTime);
+                // 2.判断是否有功图
+                if (getDianYCData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
+                    float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), ",");
+                    float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), ",");
+                    float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
+
+                    String powerStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase());
+
+                    float[] power = null;
+                    if (powerStr != null) {
+                        power = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), ",");
+                    }
+
+                    WellInfoWrapper info = wellInfoService.findWellInfoByCode(code);
+                    float bj = info == null || info.getBeng_jing() == null ? 56f : Float.valueOf(info.getBeng_jing());
+                    float hs = info == null || info.getHan_shui() == null ? 0.9f : Float.valueOf(info.getHan_shui());
+                    float md = info == null || info.getYymd() == null ? 1 : Float.valueOf(info.getYymd());
+//                    System.out.println(""+bj);
+//                    System.out.println(""+hs);
+//                    System.out.println(""+md);
+                    GTDataComputerProcess gtData = new GTDataComputerProcess();
+                    Map<GTReturnKeyEnum, Object> resultMap = null;
+                    try {
+                        resultMap = gtData.calcSGTData(weiyi, zaihe, power, chongCi, bj, md, hs / 100);
+                    } catch (Exception e) {
+                        System.out.println("功图分析出现异常：" + e.toString());
+                        e.printStackTrace();
+                        continue;
+                    }
+                    Date date = CommonUtils.string2Date(newDateTime);
+
+                    String shCYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24);
+                    String ljCYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24 * timeProportion(date));
+                    String ygCYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24);
+
+                    String shYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.OIL_PRODUCT) * 24);
+                    String ljYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.OIL_PRODUCT) * 24 * timeProportion(date));
+                    String ygYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.OIL_PRODUCT) * 24);
+
+                    String nhShang = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_SHANG));
+                    String nhXia = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_XIA));
+                    String phl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU));
+
+                    String shNH = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_RI));
+                    String ljNH = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_RI) * timeProportion(date));
+                    String ygNH = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_RI));
+
+//                    System.out.println(code + "產液量：" + (Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24);
+//                    System.out.println(code + "平衡度：" + phl);
+
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_CYL.toString(), shCYL);
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_CYL.toString(), ljCYL);
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_YUGU_CYL.toString(), ygCYL);
+
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_YL.toString(), shYL);
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_YL.toString(), ljYL);
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_YUGU_YL.toString(), ygYL);
+
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_HDL.toString(), shNH);
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_HDL.toString(), ljNH);
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_YUGU_HDL.toString(), ygNH);
+
+                    realtimeDataService.putValue(code, RedisKeysEnum.SHANG_NH.toString(), nhShang);
+                    realtimeDataService.putValue(code, RedisKeysEnum.XIA_NH.toString(), nhXia);
+                    realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV.toString(), phl);
+
+                    realtimeDataService.putValue(code, RedisKeysEnum.HAN_SHUI_LV.toString(), String.valueOf(hs / 100));
+                    realtimeDataService.putValue(code, RedisKeysEnum.DONG_YE_MIAIN.toString(), "0");
+                    
+                    //TODU:写历史数据
+                }
+            }
+        }
+        System.out.println("完成功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    /**
+     * 井基本数据录入任务 每天凌晨1秒触发
+     */
+    @Scheduled(cron = "1 0 0 * * ? ")
+    private void wellInfoSave() {
+        System.out.println("开始录入井信息：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+
+        List<Map<String, Object>> allEndtagsCode = wellInfoService.findAllEndtagsCode();
+//		System.out.println(allEndtagsCode.size());
+        for (int i = 0; i < allEndtagsCode.size(); i++) {
+            String endTagCode = (String) allEndtagsCode.get(i).get("code");
+            // System.out.println(allEndtagsCode.get(i).get("code"));
+            List<Map<String, Object>> basicInforOfthisEndtag = wellInfoService.findBasicCalculateInforsByCode(endTagCode);
+
+            if (basicInforOfthisEndtag.size() > 0) {		// 不为空
+                // 获得类似于 [57, 95.2, 2014-08-03 00:00:00.0, 0.98, 1] 的值集合， 写入表中即可
+
+                // [rq, hs, 1, bj, dmyymd]
+                float bengJing = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get(0).get("bj")).toString());
+                float hanShui = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get(0).get("hs")).toString());
+                float yymd = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get(0).get("dmyymd")).toString());
+                Date lrqiDate = (Date) basicInforOfthisEndtag.get(0).get("rq");
+                //System.out.println(CommonUtils.getCode() + ", " + endTagCode
+                //		+ ", " + bengJing + ", " + hanShui
+                //		+ ", " + yymd + ", " + lrqiDate);
+
+                // 此处调用写入函数
+                wellInfoService.addOneTWellInforRecord(
+                        CommonUtils.getCode(),
+                        endTagCode,
+                        bengJing,
+                        hanShui,
+                        1.0f, // 水密度 默认1.0
+                        yymd,
+                        lrqiDate);
+
+//				System.out.println("第" + i +" 口井: " +endTagCode +  " 参数导入完毕！");
+            }
+        }
+
+        System.out.println("完成录入井信息：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    /*
+     * 当前时间较 0点时间占一天比重
+     */
+    private float timeProportion(Date date) {
+        Calendar cal = Calendar.getInstance();		// 当前时间
+        cal.setTime(date);
+        return (float) (cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)) / (24 * 60);
+//        long begin = cal.getTimeInMillis();
+//        Calendar cal24 = new GregorianCalendar(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE),0,0,0);
+//        long end = cal24.getTimeInMillis();			// 24点结束时间  至 源点 毫秒
+//        float bz = (float) (begin-end) / (24*60*60*1000);	// 比例
+//        return bz;
+    }
+
+    public static void main(String args[]) {
+        Scheduler s = new Scheduler();
+        System.out.println(s.timeProportion(new Date()));
     }
 }

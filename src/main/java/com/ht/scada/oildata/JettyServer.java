@@ -13,7 +13,7 @@ import java.io.File;
 public class JettyServer {
     private static final Logger log = LoggerFactory.getLogger(JettyServer.class);
     public static void main(String[] args) throws Exception {
-        log.info("启动Web");
+//        log.info("启动Web");
 
         Server server = new Server(8083);
 

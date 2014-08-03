@@ -33,7 +33,7 @@
   <logger name="org.springframework" level="WARN"/>
   <logger name="org.springframework.scheduling.quartz" level="WARN"/>
   <logger name="org.springframework.data.jpa" level="ERROR"/>
-  <logger name="com.ht" level="DEBUG"/>
+  <logger name="com.ht" level="ERROR"/>
   <root level="ERROR">
     <appender-ref ref="stdout"/>
     <appender-ref ref="logfile"/>

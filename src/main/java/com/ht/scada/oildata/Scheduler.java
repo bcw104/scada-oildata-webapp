@@ -112,11 +112,13 @@ public class Scheduler {
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
                 String code = youJing.getCode();
+                // 1.判断功图时间是否更新
+                String newDateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
+                if (dateMap.get(code) != null && dateMap.get(code).equals(newDateTime)) {
+                    return;
+                }
+                // 2.判断是否有功图
                 if (getDianYCData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
-                    String newDateTime = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GT_DATETIME.toString());
-                    if (dateMap.get(code) != null && dateMap.get(code).equals(newDateTime)) {
-                        return;
-                    }
                     dateMap.put(code, newDateTime);
                     WetkSGT wetkSGT = new WetkSGT();
                     gtId = CommonUtils.getCode();

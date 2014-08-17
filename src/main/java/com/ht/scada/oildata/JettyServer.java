@@ -37,7 +37,7 @@ public class JettyServer {
 //		FileInputStream fis = new FileInputStream(new File("./etc/jetty.xml"));
 //		XmlConfiguration configuration = new XmlConfiguration(fis);
 //		Server server = (Server) configuration.configure();
-        System.out.println("启动Web服务");
+        System.out.println("启动定时任务程序……");
         server.start();
         server.join();
     }

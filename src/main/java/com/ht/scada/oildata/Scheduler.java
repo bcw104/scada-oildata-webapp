@@ -12,9 +12,9 @@ import com.ht.scada.oildata.calc.GTDataComputerProcess;
 import com.ht.scada.oildata.calc.GTReturnKeyEnum;
 import com.ht.scada.oildata.entity.WetkSGT;
 import com.ht.scada.oildata.model.WellInfoWrapper;
-import com.ht.scada.oildata.service.ReportService;
+import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.WellInfoService;
-import com.ht.scada.oildata.service.WellService;
+import com.ht.scada.oildata.service.ScdtService;
 import com.ht.scada.oildata.service.WetkSGTService;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
 import java.math.BigDecimal;
@@ -36,39 +36,100 @@ import org.joda.time.LocalDateTime;
  */
 @Component
 public class Scheduler {
+
     @Autowired
     private EndTagService endTagService;
     @Autowired
-    private ReportService reportService;
-    @Autowired
     private RealtimeDataService realtimeDataService;
-    @Autowired
-    private WellService wellService;
     @Autowired
     private WetkSGTService wetkSGTService;
     @Autowired
     private WellInfoService wellInfoService;
+    @Autowired
+    private ScdtService scdtService;
+    @Autowired
+    private CommonScdtService commonScdtService;
     private Map<String, String> dateMap = new HashMap<>();
     private Map<String, String> myDateMap = new HashMap<>();
 
-     /**
-     *  凌晨1秒任务
+    /**
+     * 测试你的方法，启动时运行
+     */
+    private void testYourMathod() {
+        commonScdtService.runBanBaoTask();
+//        eightTask();
+    }
+
+    /**
+     * 凌晨1秒任务
      */
     @Scheduled(cron = "1 0 0 * * ? ")
     private void dailyTask() {
         wellInfoSaveTask(); //井基本数据录入任务
     }
-    
+
     /**
      * 每隔10分钟定时任务
      */
-    @Scheduled(cron = "0 0/1 * * * ? ")
+    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourlyTask() {
         wetkTask();     //威尔泰克功图
-//        oilProductCalcTask();   //功图分析
+        oilProductCalcTask();   //功图分析
     }
+
+    /**
+     * 每天7点半将报表数据写入数据库
+     */
+    @Scheduled(cron = "0 55 7 * * ? ")
+    private void reportTask() {
+        commonScdtService.runRiBaoTask();
+    }
+
+    /**
+     * 9、11、13、15、17、19、21、23、1、3、5、7
+     */
+    @Scheduled(cron = "0 45 1/2 * * ? ")
+    private void banbaoTask() {
+        commonScdtService.runBanBaoTask();
+    }
+
+    /**
+     * 每天8点钟任务
+     */
+    @Scheduled(cron = "0 50 7 * * ? ")
+    private void eightTask() {
+        dbdsTask();
+    }
+
+    /**
+     * 生产动态导入源头库中油井日报数据
+     */
+    private void scdtYjrbInsert() {
+//        scdtService.
+    }
+
+    /**
+     * 每天8点更新电表读数
+     *
+     * @author 赵磊
+     */
+    private void dbdsTask() {
+        System.out.println("开始更新电表读数——现在时刻：" + CommonUtils.date2String(new Date()));
+        List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if (youJingList != null && youJingList.size() > 0) {
+            for (EndTag youJing : youJingList) {
+                String code = youJing.getCode();
+                String num = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase()) == null ? "0"
+                        : realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
+                realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString(), num);
+            }
+        }
+        System.out.println("结束更新电表读数——现在时刻：" + CommonUtils.date2String(new Date()));
+    }
+
     /**
      * 威尔泰克功图数据
+     *
      * @author 陈志强
      */
     private void wetkTask() {
@@ -125,6 +186,7 @@ public class Scheduler {
 
     /**
      * 功图分析计算
+     *
      * @author 赵磊
      */
     private void oilProductCalcTask() {
@@ -150,10 +212,15 @@ public class Scheduler {
                     float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
 
                     String powerStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase());
-
                     float[] power = null;
                     if (powerStr != null) {
                         power = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), ",");
+                    }
+
+                    String dlStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase());
+                    float[] dl = null;
+                    if (dlStr != null) {
+                        dl = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()), ",");
                     }
 
                     WellInfoWrapper info = wellInfoService.findWellInfoByCode(code);
@@ -166,7 +233,7 @@ public class Scheduler {
                     GTDataComputerProcess gtData = new GTDataComputerProcess();
                     Map<GTReturnKeyEnum, Object> resultMap = null;
                     try {
-                        resultMap = gtData.calcSGTData(weiyi, zaihe, power, chongCi, bj, md, hs / 100);
+                        resultMap = gtData.calcSGTData(weiyi, zaihe, power, dl, chongCi, bj, md, hs / 100);
                     } catch (Exception e) {
                         System.out.println("功图分析出现异常：" + e.toString());
                         e.printStackTrace();
@@ -189,8 +256,11 @@ public class Scheduler {
                     String shNH = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_RI));
                     String ljNH = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_RI) * timeProportion(date));
                     String ygNH = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_RI));
-//                    System.out.println(code + "產液量：" + (Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24);
-//                    System.out.println(code + "平衡度：" + phl);
+                    
+                    String phddl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU_DL));
+                    String sxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_SHANG));
+                    String xxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_XIA));
+                    
                     realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_CYL.toString(), shCYL);
                     realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_CYL.toString(), ljCYL);
                     realtimeDataService.putValue(code, RedisKeysEnum.RI_YUGU_CYL.toString(), ygCYL);
@@ -209,6 +279,10 @@ public class Scheduler {
 
                     realtimeDataService.putValue(code, RedisKeysEnum.HAN_SHUI_LV.toString(), String.valueOf(hs / 100));
                     realtimeDataService.putValue(code, RedisKeysEnum.DONG_YE_MIAIN.toString(), "0");
+                    
+                    realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV_DL.toString(), phddl);
+                    realtimeDataService.putValue(code, RedisKeysEnum.DL_SHANG.toString(), sxdl);
+                    realtimeDataService.putValue(code, RedisKeysEnum.DL_XIA.toString(), xxdl);
                     //TODU:写历史数据
                 }
             }
@@ -218,6 +292,7 @@ public class Scheduler {
 
     /**
      * 井基本数据录入任务
+     *
      * @author 王蓬
      */
     private void wellInfoSaveTask() {
@@ -226,13 +301,13 @@ public class Scheduler {
         List<Map<String, Object>> allEndtagsCode = wellInfoService.findAllEndtagsCode();
         for (int i = 0; i < allEndtagsCode.size(); i++) {
             String endTagCode = (String) allEndtagsCode.get(i).get("code");
-            List<Map<String, Object>> basicInforOfthisEndtag = wellInfoService.findBasicCalculateInforsByCode(endTagCode);
+            Map<String, Object> basicInforOfthisEndtag = wellInfoService.findBasicCalculateInforsByCode(endTagCode);
 
-            if (basicInforOfthisEndtag.size() > 0) {		// 不为空
-                float bengJing = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get(0).get("bj")).toString());
-                float hanShui = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get(0).get("hs")).toString());
-                float yymd = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get(0).get("dmyymd")).toString());
-                Date lrqiDate = (Date) basicInforOfthisEndtag.get(0).get("rq");
+            if (basicInforOfthisEndtag != null) {		// 不为空
+                float bengJing = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("bj")).toString());
+                float hanShui = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("hs")).toString());
+                float yymd = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("dmyymd")).toString());
+                Date lrqiDate = (Date) basicInforOfthisEndtag.get("rq");
                 // 此处调用写入函数
                 wellInfoService.addOneTWellInforRecord(
                         CommonUtils.getCode(),

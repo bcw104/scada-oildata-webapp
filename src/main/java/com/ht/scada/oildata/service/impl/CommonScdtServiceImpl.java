@@ -53,6 +53,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 
     /**
      * 班报任务
+     *
+     * @author 赵磊
      */
     @Override
     public void runBanBaoTask() {
@@ -63,9 +65,9 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                 String code = youJing.getCode();
                 String sql = "insert into T_Well_Hourly_Data "
                         + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
-                        + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,HDL,CYL,YL,YXSJ,LJHDL,LJCYL,LJYL,LJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,PL,SXNH,XXNH,SJD) "
+                        + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,HDL,CYL,YL,YXSJ,LJHDL,LJCYL,LJYL,LJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,PL,SXNH,XXNH,SJD,PHL1) "
                         + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM,:YYMD, :TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
-                        + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:HDL,:CYL,:YL,:YXSJ,:LJHDL,:LJCYL,:LJYL,:LJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:PL,:SXNH,:XXNH,:SJD)";
+                        + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:HDL,:CYL,:YL,:YXSJ,:LJHDL,:LJCYL,:LJYL,:LJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:PL,:SXNH,:XXNH,:SJD,:PHL1)";
                 //源头库中数据
                 Map<String, Object> map = findDataFromYdkByCode(code);
                 Float BJ = null, HS = null, BS = null, QYB = null, DMYYMD = null, DCSMD = null, DYM = null, TRQXDMD = null;
@@ -90,11 +92,10 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     ZAIHE = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase());
                     WEIYI = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
                 }
-                Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()));
+                Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString())) / 12;
                 Float YL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString())) / 12;
-                Float PHL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString())) / 12;
+                Float PHL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()));
 //              Float HDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_HDL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_HDL.toString())) / 12;
-
 
                 Float LJHDL = 0f;
                 //累积用电量
@@ -147,7 +148,6 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                             HDL -= data.getHdl() == null ? 0f : data.getHdl();
                         }
                     }
-
                 }
                 LJCYL += CYL == null ? 0f : CYL;
                 LJYL += YL == null ? 0f : YL;
@@ -163,6 +163,11 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                 Float XXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString()));
                 Float SXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString()));
                 Float XXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString()));
+
+                Float PHL1 = null;
+                if (SXDL != null && XXDL != null && Math.abs(SXDL) > 0) {
+                    PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
+                }
 
                 Calendar c = Calendar.getInstance();
                 c.set(Calendar.MINUTE, 0);
@@ -194,6 +199,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                             .addParameter("WEIYI", WEIYI)//位移
                             .addParameter("ZAIHE", ZAIHE)//载荷
                             .addParameter("PHL", PHL)//平衡率
+                            .addParameter("PHL1", PHL1)//平衡率
                             .addParameter("HDL", HDL)//耗电量
                             .addParameter("CYL", CYL)//产液量
                             .addParameter("YL", YL)//油量
@@ -233,39 +239,120 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 
                 String sql = "Insert into T_Well_Daily_Data "
                         + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
-                        + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,HDL,CYL,YL,RLJYXSJ) "
-                        + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM,:YYMD, :TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
-                        + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:HDL,:CYL,:YL,:RLJYXSJ)";
+                        + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,PHL1,HDL,CYL,YL,RLJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,SXNH,XXNH,PL,BX,CQL) "
+                        + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM, :YYMD,:TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
+                        + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:PHL1,:HDL,:CYL,:YL,:RLJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:SXNH,:XXNH,:PL,:BX,:CQL)";
 
-                //DYM
+                //源头库中数据
+                Map<String, Object> map = findDataFromYdkByCodeWithBX(code);
+                Float BJ = null, HS = null, BS = null, QYB = null, DMYYMD = null, DCSMD = null, DYM = null, TRQXDMD = null, BX = null, CQL = null;
+                if (map != null) {
+                    BJ = Float.parseFloat(((BigDecimal) map.get("bj")).toString());
+                    HS = Float.parseFloat(((BigDecimal) map.get("hs")).toString());
+                    BS = map.get("bs") == null ? null : Float.parseFloat(((BigDecimal) map.get("bs")).toString());
+                    QYB = map.get("qyb") == null ? null : Float.parseFloat(((BigDecimal) map.get("qyb")).toString());
+                    DMYYMD = map.get("dmyymd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dmyymd")).toString());
+                    DCSMD = map.get("dcsmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dcsmd")).toString());
+                    DYM = map.get("dym") != null ? Float.parseFloat(((BigDecimal) map.get("dym")).toString()) : null;
+                    TRQXDMD = map.get("trqxdmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("trqxdmd")).toString());
+                    BX = map.get("sjbx") == null ? null : Float.parseFloat(((BigDecimal) map.get("sjbx")).toString());
+                    CQL = map.get("rcql") == null ? null : Float.parseFloat(((BigDecimal) map.get("rcql")).toString());
+                }
+                //DYM写入实时库
+                realtimeDataService.putValue(code, RedisKeysEnum.DONG_YE_MIAIN.toString(), DYM == null ? "测不出" : String.valueOf(DYM));
+
+                String ZAIHE = null, WEIYI = null;
+
+                Float CHONG_CHENG = null, CHONG_CI = null, ZDZH = null, ZXZH = null,
+                        PHL = null, PHL1 = null, HDL = null, CYL = null, YL = null, RLJYXSJ = null, HY = null,
+                        TY = null, WD = null, PJDL = null, PJDY = null, SXDL = null, XXDL = null, SXNH = null, XXNH = null, PL = null;
+
+                Calendar startTime = Calendar.getInstance();
+                Calendar endTime = Calendar.getInstance();
+                startTime.set(Calendar.MINUTE, 0);
+                startTime.set(Calendar.SECOND, 0);
+                startTime.set(Calendar.MILLISECOND, 0);
+                startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
+                startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
+                endTime.set(Calendar.MINUTE, 0);
+                endTime.set(Calendar.SECOND, 0);
+                endTime.set(Calendar.MILLISECOND, 0);
+                endTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
+                Map<String, Object> dayMap = getDailyData(code, startTime.getTime(), endTime.getTime());
+                Map<String, Object> dayLatestMap = getLatestDailyData(code, startTime.getTime(), endTime.getTime());
+                if (dayMap != null) {
+                    CHONG_CHENG = dayMap.get("chong_cheng") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_cheng")).toString());
+                    CHONG_CI = dayMap.get("chong_ci") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_ci")).toString());
+                    ZDZH = dayMap.get("zdzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zdzh")).toString());
+                    ZXZH = dayMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zxzh")).toString());
+                    PHL = dayMap.get("phl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("phl")).toString());
+                    PHL1 = dayMap.get("phl1") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("phl1")).toString());
+
+                    HY = dayMap.get("hy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("hy")).toString());
+                    TY = dayMap.get("ty") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("ty")).toString());
+                    WD = dayMap.get("wd") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("wd")).toString());
+                    PJDL = dayMap.get("pjdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdl")).toString());
+                    PJDY = dayMap.get("pjdy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdy")).toString());
+                    SXDL = dayMap.get("sxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxdl")).toString());
+                    XXDL = dayMap.get("xxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxdl")).toString());
+                    SXNH = dayMap.get("sxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxnh")).toString());
+                    XXNH = dayMap.get("xxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxnh")).toString());
+                    PL = dayMap.get("pl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pl")).toString());
+                    if (dayLatestMap != null) {
+                        HDL = dayLatestMap.get("ljhdl") != null ? Float.parseFloat(((BigDecimal) dayLatestMap.get("ljhdl")).toString()) : null;
+                        CYL = dayLatestMap.get("ljcyl") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljcyl")).toString());
+                        YL = dayLatestMap.get("ljyl") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljyl")).toString());
+                        RLJYXSJ = dayLatestMap.get("ljyxsj") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljyxsj")).toString());
+                    }
+                }
+
+                Calendar c = Calendar.getInstance();
+                c.set(Calendar.MINUTE, 0);
+                c.set(Calendar.SECOND, 0);
+                c.set(Calendar.MILLISECOND, 0);
+                c.set(Calendar.HOUR_OF_DAY, 0);
 
                 try (Connection con = sql2o.open()) {  			//
                     con.createQuery(sql) //
                             .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
                             .addParameter("CODE", code) //
-                            .addParameter("BENG_JING", 1)//
-                            .addParameter("HAN_SHUI", 1) //
-                            .addParameter("DYM", 1) //动液面
-                            .addParameter("YYMD", 1) //原油密度
-                            .addParameter("TRQXDMD", 1) //天然气相对密度
-                            .addParameter("SMD", 1)//水密度
-                            .addParameter("QYB", 1)//生产汽油比
-                            .addParameter("BENG_SHEN", 1)//泵深
-                            .addParameter("BZSZ", 1)//标准上载
-                            .addParameter("BZXZ", 1)//标准下载
+                            .addParameter("BENG_JING", BJ)//
+                            .addParameter("HAN_SHUI", HS) //
+                            .addParameter("DYM", DYM) //动液面
+                            .addParameter("YYMD", DMYYMD) //原油密度
+                            .addParameter("TRQXDMD", TRQXDMD) //天然气相对密度
+                            .addParameter("SMD", DCSMD)//水密度
+                            .addParameter("QYB", QYB)//生产汽油比
+                            .addParameter("BENG_SHEN", BS)//泵深
+                            .addParameter("BX", BX)//泵效
+                            .addParameter("CQL", CQL)//产气量
+                            .addParameter("BZSZ", -1)//标准上载
+                            .addParameter("BZXZ", -1)//标准下载
                             .addParameter("SAVE_TIME", new Date())//
-                            .addParameter("DATE_TIME", new Date())//
-                            .addParameter("CHONG_CHENG", 1)//冲程
-                            .addParameter("CHONG_CI", 1)//冲次
-                            .addParameter("MIN_ZAIHE", 1)//最小载荷
-                            .addParameter("MAX_ZAIHE", 1)//最大载荷
-                            .addParameter("WEIYI", code)//位移
-                            .addParameter("ZAIHE", code)//载荷
-                            .addParameter("PHL", 1)//平衡率
-                            .addParameter("HDL", 1)//耗电量
-                            .addParameter("CYL", 1)//产液量
-                            .addParameter("YL", 1)//液量
-                            .addParameter("RLJYXSJ", 1)//日累积运行时间
+                            .addParameter("DATE_TIME", c.getTime())//
+                            .addParameter("CHONG_CHENG", CHONG_CHENG)//冲程
+                            .addParameter("CHONG_CI", CHONG_CI)//冲次
+                            .addParameter("MIN_ZAIHE", ZXZH)//最小载荷
+                            .addParameter("MAX_ZAIHE", ZDZH)//最大载荷
+                            .addParameter("WEIYI", WEIYI)//位移
+                            .addParameter("ZAIHE", ZAIHE)//载荷
+                            .addParameter("PHL", PHL)//平衡率
+                            .addParameter("PHL1", PHL1)//电流平衡率
+                            .addParameter("HDL", HDL)//耗电量
+                            .addParameter("CYL", CYL)//产液量
+                            .addParameter("YL", YL)//油量
+                            .addParameter("RLJYXSJ", RLJYXSJ)//运行时间
+                            .addParameter("HY", HY)//回压
+                            .addParameter("TY", TY)//套压
+                            .addParameter("WD", WD)//温度
+                            .addParameter("PJDL", PJDL)//平均电流
+                            .addParameter("PJDY", PJDY)//平均电压
+                            .addParameter("SXDL", SXDL)//上行电流
+                            .addParameter("XXDL", XXDL)//下行电流
+                            .addParameter("SXNH", SXNH)//上行能耗
+                            .addParameter("XXNH", XXNH)//下行能耗
+                            .addParameter("PL", PL)//频率
+                            //.addParameter("BZ", "")//备注
 
                             .executeUpdate();//
                 } catch (Exception e) {
@@ -300,6 +387,103 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         return null;
     }
 
+    /**
+     * 从源头库查询数据(带泵效、产气量)
+     *
+     * @param code
+     * @return
+     */
+    private Map<String, Object> findDataFromYdkByCodeWithBX(String code) {
+        String sql = "SELECT * FROM (SELECT s.BJ , s.HS , s.BS , s.QYB, s.RCQL, q.DMYYMD , q.DCSMD , y.DYM, t.TRQXDMD, z.SJBX "
+                + "FROM ys_dba01@ydk s INNER JOIN ys_dab04@ydk q ON s.JH = :CODE AND s.DYDM = q.DYDM LEFT JOIN YS_DCA03@ydk y "
+                + " ON s.JH = y.JH LEFT JOIN ys_dab05@ydk t on s.DYDM = t.DYDM LEFT JOIN ys_dca021@ydk z on s.JH=z.JH WHERE s.BJ IS NOT NULL AND s.HS IS NOT NULL "
+                + "ORDER BY s.RQ DESC ) WHERE rownum <= 1";
+
+        List<Map<String, Object>> list;
+        try (Connection con = sql2o.open()) {
+            list = con.createQuery(sql)
+                    .addParameter("CODE", code)
+                    .executeAndFetchTable().asList();
+        }
+        if (list != null && !list.isEmpty()) {
+            return list.get(0);
+        }
+        return null;
+    }
+
+//     Float CHONG_CHENG = null, CHONG_CI = null, ZDZH = null, ZXZH = null,
+//                        PHL = null, PHL1 = null, HDL = null, CYL = null, YL = null, RLJYXSJ = null, HY = null,
+//                        TY = null, WD = null, PJDL = null, PJDY = null, SXDL = null, XXDL = null, SXNH = null, XXNH = null, PL = null;
+    /**
+     * 从T_WELL_HOURLY_DATA中计算日数据
+     *
+     * @param code
+     * @param startTime
+     * @param endTime
+     * @return
+     */
+    private Map<String, Object> getDailyData(String code, Date startTime, Date endTime) {
+        String sql = "SELECT avg(CHONG_CHENG) as CHONG_CHENG, "
+                + "avg(CHONG_CI) as CHONG_CI, "
+                + "avg(MAX_ZAIHE) as ZDZH, "
+                + "avg(MIN_ZAIHE) as ZXZH, "
+                + "avg(PHL) as PHL, "
+                + "avg(PHL1) as PHL1, "
+                //                +"sum(hdl) as HDL, "
+                //                +"sum(cyl) as CYL, "
+                //                +"sum(yl) as YL, "
+                //                +"sum(yxsj) as RLJYXSJ, "
+                + "avg(HY) as HY, "
+                + "avg(TY) as TY, "
+                + "avg(WD) as WD, "
+                + "avg(PJDL) as PJDL, "
+                + "avg(PJDY) as PJDY, "
+                + "avg(SXDL) as SXDL, "
+                + "avg(XXDL) as XXDL, "
+                + "avg(SXNH) as SXNH, "
+                + "avg(XXNH) as XXNH, "
+                + "avg(PL) as PL "
+                + " from T_WELL_HOURLY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime order by DATE_TIME DESC";
+
+        List<Map<String, Object>> list;
+        try (Connection con = sql2o.open()) {
+            list = con.createQuery(sql)
+                    .addParameter("CODE", code)
+                    .addParameter("startTime", startTime)
+                    .addParameter("endTime", endTime)
+                    .executeAndFetchTable().asList();
+        }
+        if (list != null && !list.isEmpty()) {
+            return list.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * 获取累计值
+     *
+     * @param code
+     * @param startTime
+     * @param endTime
+     * @return
+     */
+    private Map<String, Object> getLatestDailyData(String code, Date startTime, Date endTime) {
+        String sql = "SELECT ljhdl,ljcyl,ljyl,ljyxsj from T_WELL_HOURLY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime order by DATE_TIME DESC";
+
+        List<Map<String, Object>> list;
+        try (Connection con = sql2o.open()) {
+            list = con.createQuery(sql)
+                    .addParameter("CODE", code)
+                    .addParameter("startTime", startTime)
+                    .addParameter("endTime", endTime)
+                    .executeAndFetchTable().asList();
+        }
+        if (list != null && !list.isEmpty()) {
+            return list.get(0);
+        }
+        return null;
+    }
+
     private float getRealData(String code, String varName) {
         String value = realtimeDataService.getEndTagVarInfo(code, varName);
         if (value != null && !value.isEmpty()) {
@@ -316,7 +500,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
      * @return
      */
     private float getYxsjByCode(String code, Date startTime, Date endTime) {
-        String sql = "select * from T_SOE_RECORD where code=:CODE and DEVICE_TIME>=:startTime and DEVICE_TIME<=:endTime and ALARM_TYPE='油井启停报警' order by DEVICE_TIME desc" ;
+        String sql = "select * from T_SOE_RECORD where code=:CODE and DEVICE_TIME>=:startTime and DEVICE_TIME<=:endTime and ALARM_TYPE='油井启停报警' order by DEVICE_TIME desc";
         float time = 120f;
         try (Connection con = sql2o.open()) {
             List<SoeRecord> list = con.createQuery(sql)
@@ -326,20 +510,20 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     .addParameter("endTime", endTime)
                     .executeAndFetch(SoeRecord.class);
             long lastStopTime = startTime.getTime();
-            if(list != null && !list.isEmpty()) {
-                for(SoeRecord s : list) {
-                    if(s.getTagName().contains("停")) {
+            if (list != null && !list.isEmpty()) {
+                for (SoeRecord s : list) {
+                    if (s.getTagName().contains("停")) {
                         lastStopTime = s.getDeviceTime().getTime();
-                    } else if(s.getTagName().contains("起")){
-                        if(lastStopTime == -1) {
+                    } else if (s.getTagName().contains("起")) {
+                        if (lastStopTime == -1) {
                             continue;
                         }
-                        time -= ((float)(s.getDeviceTime().getTime()-lastStopTime))/(1000*60);
+                        time -= ((float) (s.getDeviceTime().getTime() - lastStopTime)) / (1000 * 60);
                         lastStopTime = -1;
                     }
                 }
-                if(lastStopTime != -1 && lastStopTime != startTime.getTime()) {//一直未起井
-                    time -= ((float)(endTime.getTime()-lastStopTime))/(1000*60);
+                if (lastStopTime != -1 && lastStopTime != startTime.getTime()) {//一直未起井
+                    time -= ((float) (endTime.getTime() - lastStopTime)) / (1000 * 60);
                 }
             } else {//若一直停井则需另判断
                 return time;

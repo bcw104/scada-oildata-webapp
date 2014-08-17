@@ -56,7 +56,7 @@ public class Scheduler {
      * 测试你的方法，启动时运行
      */
     private void testYourMathod() {
-        commonScdtService.runBanBaoTask();
+        commonScdtService.runRiBaoTask();
 //        eightTask();
     }
 

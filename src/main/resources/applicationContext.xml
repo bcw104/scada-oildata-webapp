@@ -31,7 +31,7 @@
 
     <description>Spring公共配置</description>
 
-    <context:property-placeholder ignore-unresolvable="true" location="classpath*:/config.properties" />
+   
 
     <import resource="classpath:applicationContext-redis.xml" />
     <import resource="classpath:applicationContext-jpa.xml" />
@@ -60,8 +60,22 @@
         <!--<property name="dataSource" ref="dataSource"></property>-->
     </bean>
     <!--<bean id="sql2o" class="org.sql2o.Sql2o" >-->
-        <!--<constructor-arg ref="dataSource"></constructor-arg>-->
+    <!--<constructor-arg ref="dataSource"></constructor-arg>-->
     <!--</bean>-->
+    
+    <context:property-placeholder ignore-unresolvable="true" location="classpath*:/config.properties" />
+    
+<!--    <bean
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+        <property name="ignoreResourceNotFound" value="true" />
+        <property name="locations">
+            <list>
+                <value>file:config.properties</value>
+                <value>classpath*:config.properties</value>
+            </list>
+        </property>
+    </bean>-->
 
     <!-- 启动运行 -->
     <bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="testYourMathod"/>

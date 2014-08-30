@@ -10,4 +10,6 @@ public interface CommonScdtService {
      * 日报任务
      */
     void runRiBaoTask();
+    
+    void testMathod();
 }

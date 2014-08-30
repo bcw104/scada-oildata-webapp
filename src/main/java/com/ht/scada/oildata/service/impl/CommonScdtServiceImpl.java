@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.inject.Inject;
+import org.joda.time.LocalDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,7 @@ import org.sql2o.Sql2o;
 @Service("commonScdtService")
 public class CommonScdtServiceImpl implements CommonScdtService {
 
+    private static final Logger log = LoggerFactory.getLogger(CommonScdtServiceImpl.class);
     @Autowired
     private EndTagService endTagService;
     @Autowired
@@ -62,168 +66,185 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
-                String code = youJing.getCode();
-                String sql = "insert into T_Well_Hourly_Data "
-                        + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
-                        + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,HDL,CYL,YL,YXSJ,LJHDL,LJCYL,LJYL,LJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,PL,SXNH,XXNH,SJD,PHL1) "
-                        + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM,:YYMD, :TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
-                        + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:HDL,:CYL,:YL,:YXSJ,:LJHDL,:LJCYL,:LJYL,:LJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:PL,:SXNH,:XXNH,:SJD,:PHL1)";
-                //源头库中数据
-                Map<String, Object> map = findDataFromYdkByCode(code);
-                Float BJ = null, HS = null, BS = null, QYB = null, DMYYMD = null, DCSMD = null, DYM = null, TRQXDMD = null;
-                if (map != null) {
-                    BJ = Float.parseFloat(((BigDecimal) map.get("bj")).toString());
-                    HS = Float.parseFloat(((BigDecimal) map.get("hs")).toString());
-                    BS = map.get("bs") == null ? null : Float.parseFloat(((BigDecimal) map.get("bs")).toString());
-                    QYB = map.get("qyb") == null ? null : Float.parseFloat(((BigDecimal) map.get("qyb")).toString());
-                    DMYYMD = map.get("dmyymd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dmyymd")).toString());
-                    DCSMD = map.get("dcsmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dcsmd")).toString());
-                    DYM = map.get("dym") != null ? Float.parseFloat(((BigDecimal) map.get("dym")).toString()) : null;
-                    TRQXDMD = map.get("trqxdmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("trqxdmd")).toString());
-                }
-                //实时库中数据
-                Float CHONG_CHONG = null, CHONG_CI = null, ZDZH = null, ZXZH = null;
-                String ZAIHE = null, WEIYI = null;
-                if (getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
-                    CHONG_CHONG = getRealData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());
-                    CHONG_CI = getRealData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase());
-                    ZDZH = getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase());
-                    ZXZH = getRealData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase());
-                    ZAIHE = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase());
-                    WEIYI = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
-                }
-                Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString())) / 12;
-                Float YL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString())) / 12;
-                Float PHL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()));
+                try {
+                    String code = youJing.getCode();
+                    String sql = "insert into T_Well_Hourly_Data "
+                            + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
+                            + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,HDL,CYL,YL,YXSJ,LJHDL,LJCYL,LJYL,LJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,PL,SXNH,XXNH,SJD,PHL1) "
+                            + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM,:YYMD, :TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
+                            + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:HDL,:CYL,:YL,:YXSJ,:LJHDL,:LJCYL,:LJYL,:LJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:PL,:SXNH,:XXNH,:SJD,:PHL1)";
+                    //源头库中数据
+                    Map<String, Object> map = findDataFromYdkByCode(code);
+                    Float BJ = null, HS = null, BS = null, QYB = null, DMYYMD = null, DCSMD = null, DYM = null, TRQXDMD = null;
+                    if (map != null) {
+                        BJ = Float.parseFloat(((BigDecimal) map.get("bj")).toString());
+                        HS = Float.parseFloat(((BigDecimal) map.get("hs")).toString());
+                        BS = map.get("bs") == null ? null : Float.parseFloat(((BigDecimal) map.get("bs")).toString());
+                        QYB = map.get("qyb") == null ? null : Float.parseFloat(((BigDecimal) map.get("qyb")).toString());
+                        DMYYMD = map.get("dmyymd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dmyymd")).toString());
+                        DCSMD = map.get("dcsmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dcsmd")).toString());
+                        DYM = map.get("dym") != null ? Float.parseFloat(((BigDecimal) map.get("dym")).toString()) : null;
+                        TRQXDMD = map.get("trqxdmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("trqxdmd")).toString());
+                    }
+                    //实时库中数据
+                    Float CHONG_CHONG = null, CHONG_CI = null, ZDZH = null, ZXZH = null;
+                    String ZAIHE = null, WEIYI = null;
+                    if (getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
+                        CHONG_CHONG = getRealData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());
+                        CHONG_CI = getRealData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase());
+                        ZDZH = getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase());
+                        ZXZH = getRealData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase());
+                        ZAIHE = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase());
+                        WEIYI = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
+                    }
+                    //TODU:用上一班的两个小时内功图求平均值
+                    Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.WETK_RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.WETK_RI_SS_CYL.toString())) / 12;
+                    Float YL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.WETK_RI_SS_YL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.WETK_RI_SS_YL.toString())) / 12;
+                    Float PHL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString()));
 //              Float HDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_HDL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_HDL.toString())) / 12;
 
-                Float LJHDL = 0f;
-                //累积用电量
-                String currentNum = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
-                if (currentNum != null) {
-                    String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
-                    LJHDL = Float.valueOf(currentNum) - Float.valueOf(zeroNum);
-                }
-
-                Float LJCYL = 0f;
-                Float LJYL = 0f;
-                Float LJYXSJ = 0f;
-                Float HDL = LJHDL;
-
-                Calendar startTime = Calendar.getInstance();
-                Calendar endTime = Calendar.getInstance();
-                startTime.set(Calendar.MINUTE, 0);
-                startTime.set(Calendar.SECOND, 0);
-                startTime.set(Calendar.MILLISECOND, 0);
-                startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 3);
-                endTime.set(Calendar.MINUTE, 0);
-                endTime.set(Calendar.SECOND, 0);
-                endTime.set(Calendar.MILLISECOND, 0);
-                endTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 1);
-                Float YXSJ = getYxsjByCode(code, startTime.getTime(), endTime.getTime());
-
-                String querySql = "select HDL, CYL, YL, YXSJ from T_Well_Hourly_Data where code=:CODE and DATE_TIME=:DATE_TIME";
-
-                Calendar cal = Calendar.getInstance();
-                cal.set(Calendar.MINUTE, 0);
-                cal.set(Calendar.SECOND, 0);
-                cal.set(Calendar.MILLISECOND, 0);
-                while (cal.get(Calendar.HOUR_OF_DAY) != 8) {
-                    if (cal.get(Calendar.HOUR_OF_DAY) % 2 != 0) {   //偶数点
-                        cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
-                        continue;
-                    }
-                    cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
-                    try (Connection con = sql2o.open()) {
-                        List<WellHourlyData> list = con.createQuery(querySql)
-                                .setAutoDeriveColumnNames(true)
-                                .addParameter("CODE", code)
-                                .addParameter("DATE_TIME", cal.getTime())
-                                .executeAndFetch(WellHourlyData.class);
-                        if (list != null && !list.isEmpty()) {
-                            WellHourlyData data = list.get(0);
-                            LJCYL += data.getCyl() == null ? 0f : data.getCyl();
-                            LJYL += data.getYl() == null ? 0f : data.getYl();
-                            LJYXSJ += data.getYxsj() == null ? 0f : data.getYxsj();
-                            HDL -= data.getHdl() == null ? 0f : data.getHdl();
+                    Float LJHDL = 0f;
+                    //累积用电量
+                    String currentNum = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
+                    try {
+                        if (currentNum != null) {
+                            String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
+                            if (zeroNum != null) {
+                                LJHDL = Float.valueOf(currentNum) - Float.valueOf(zeroNum);
+                            }
                         }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                }
-                LJCYL += CYL == null ? 0f : CYL;
-                LJYL += YL == null ? 0f : YL;
-                LJYXSJ += YXSJ == null ? 0f : YXSJ;
 
-                Float HY = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()));
-                Float TY = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()));
-                Float WD = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()));
-                Float PJDL = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.I_B.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.I_B.toString().toLowerCase()));
-                Float PJDY = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.U_B.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.U_B.toString().toLowerCase()));
-                Float PL = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.GV_ZB.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.GV_ZB.toString().toLowerCase()));
-                Float SXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_SHANG.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_SHANG.toString()));
-                Float XXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString()));
-                Float SXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString()));
-                Float XXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString()));
+                    Float LJCYL = 0f;
+                    Float LJYL = 0f;
+                    Float LJYXSJ = 0f;
+                    Float HDL = LJHDL;
 
-                Float PHL1 = null;
-                if (SXDL != null && XXDL != null && Math.abs(SXDL) > 0) {
-                    PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
-                }
+                    Calendar startTime = Calendar.getInstance();
+                    Calendar endTime = Calendar.getInstance();
+                    startTime.set(Calendar.MINUTE, 0);
+                    startTime.set(Calendar.SECOND, 0);
+                    startTime.set(Calendar.MILLISECOND, 0);
+                    startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 3);
+                    endTime.set(Calendar.MINUTE, 0);
+                    endTime.set(Calendar.SECOND, 0);
+                    endTime.set(Calendar.MILLISECOND, 0);
+                    endTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 1);
+                    Float YXSJ = getYxsjByCode(code, startTime.getTime(), endTime.getTime());
 
-                Calendar c = Calendar.getInstance();
-                c.set(Calendar.MINUTE, 0);
-                c.set(Calendar.SECOND, 0);
-                c.set(Calendar.MILLISECOND, 0);
-                c.set(Calendar.HOUR_OF_DAY, c.get(Calendar.HOUR_OF_DAY) + 1);
-                String SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
+                    String querySql = "select HDL, CYL, YL, YXSJ from T_Well_Hourly_Data where code=:CODE and DATE_TIME=:DATE_TIME";
 
-                try (Connection con = sql2o.open()) {
-                    con.createQuery(sql) //
-                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
-                            .addParameter("CODE", code) //
-                            .addParameter("BENG_JING", BJ)//泵径
-                            .addParameter("HAN_SHUI", HS) //含水
-                            .addParameter("DYM", DYM) //动液面
-                            .addParameter("YYMD", DMYYMD) //原油密度
-                            .addParameter("TRQXDMD", TRQXDMD) //天然气相对密度
-                            .addParameter("SMD", DCSMD)//水密度
-                            .addParameter("QYB", QYB)//生产汽油比
-                            .addParameter("BENG_SHEN", BS)//泵深
-                            .addParameter("BZSZ", -1)//标准上载
-                            .addParameter("BZXZ", -1)//标准下载
-                            .addParameter("SAVE_TIME", new Date())//
-                            .addParameter("DATE_TIME", c.getTime())//
-                            .addParameter("CHONG_CHENG", CHONG_CHONG)//冲程
-                            .addParameter("CHONG_CI", CHONG_CI)//冲次
-                            .addParameter("MIN_ZAIHE", ZXZH)//最小载荷
-                            .addParameter("MAX_ZAIHE", ZDZH)//最大载荷
-                            .addParameter("WEIYI", WEIYI)//位移
-                            .addParameter("ZAIHE", ZAIHE)//载荷
-                            .addParameter("PHL", PHL)//平衡率
-                            .addParameter("PHL1", PHL1)//平衡率
-                            .addParameter("HDL", HDL)//耗电量
-                            .addParameter("CYL", CYL)//产液量
-                            .addParameter("YL", YL)//油量
-                            .addParameter("LJHDL", LJHDL)//累积耗电量
-                            .addParameter("LJCYL", LJCYL)//累积产液量
-                            .addParameter("LJYL", LJYL)//累积液量
-                            .addParameter("YXSJ", YXSJ)//运行时间
-                            .addParameter("LJYXSJ", LJYXSJ)//累积运行时间
-                            .addParameter("HY", HY)//回压
-                            .addParameter("TY", TY)//套压
-                            .addParameter("WD", WD)//温度
-                            .addParameter("PJDL", PJDL)//平均电流
-                            .addParameter("PJDY", PJDY)//平均电压
-                            .addParameter("SXDL", SXDL)//上行电流
-                            .addParameter("XXDL", XXDL)//下行电流
-                            .addParameter("SXNH", SXNH)//上行能耗
-                            .addParameter("XXNH", XXNH)//下行能耗
-                            .addParameter("PL", PL)//频率
-                            .addParameter("SJD", SJD)//时间段
-                            //.addParameter("BZ", "")//备注
-                            .executeUpdate();//
+                    Calendar cal = Calendar.getInstance();
+                    cal.set(Calendar.MINUTE, 0);
+                    cal.set(Calendar.SECOND, 0);
+                    cal.set(Calendar.MILLISECOND, 0);
+                    while (cal.get(Calendar.HOUR_OF_DAY) != 8) {
+                        if (cal.get(Calendar.HOUR_OF_DAY) % 2 != 0) {   //偶数点
+                            cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
+                            continue;
+                        }
+                        try (Connection con = sql2o.open()) {
+                            List<WellHourlyData> list = con.createQuery(querySql)
+                                    .setAutoDeriveColumnNames(true)
+                                    .addParameter("CODE", code)
+                                    .addParameter("DATE_TIME", cal.getTime())
+                                    .executeAndFetch(WellHourlyData.class);
+                            if (list != null && !list.isEmpty()) {
+                                WellHourlyData data = list.get(0);
+                                LJCYL += data.getCyl() == null ? 0f : data.getCyl();
+                                LJYL += data.getYl() == null ? 0f : data.getYl();
+                                LJYXSJ += data.getYxsj() == null ? 0f : data.getYxsj();
+                                HDL -= data.getHdl() == null ? 0f : data.getHdl();
+                            }
+                        }
+                        cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
+                    }
+                    LJCYL += CYL == null ? 0f : CYL;
+                    LJYL += YL == null ? 0f : YL;
+                    LJYXSJ += YXSJ == null ? 0f : YXSJ;
+
+                    Float HY = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()));
+                    Float TY = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()));
+                    Float WD = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()));
+                    Float PJDL = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.I_B.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.I_B.toString().toLowerCase()));
+                    Float PJDY = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.U_B.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.U_B.toString().toLowerCase()));
+                    Float PL = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.GV_ZB.toString().toLowerCase()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.GV_ZB.toString().toLowerCase()));
+                    Float SXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_SHANG.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_SHANG.toString()));
+                    Float XXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString()));
+                    Float SXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString()));
+                    Float XXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString()));
+
+                    Float PHL1 = null;
+                    if (SXDL != null && XXDL != null && Math.abs(SXDL) > 0) {
+                        PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
+                    }
+
+                    Calendar c = Calendar.getInstance();
+                    c.set(Calendar.MINUTE, 0);
+                    c.set(Calendar.SECOND, 0);
+                    c.set(Calendar.MILLISECOND, 0);
+                    int hour = c.get(Calendar.HOUR_OF_DAY);
+                    
+                    if(c.get(Calendar.HOUR_OF_DAY) % 2 != 0) {
+                        c.set(Calendar.HOUR_OF_DAY, hour);
+                    } else {
+                        c.set(Calendar.HOUR_OF_DAY, hour + 1);
+                    }
+                    String SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
+
+                    try (Connection con = sql2o.open()) {
+                        con.createQuery(sql) //
+                                .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
+                                .addParameter("CODE", code) //
+                                .addParameter("BENG_JING", BJ)//泵径
+                                .addParameter("HAN_SHUI", HS) //含水
+                                .addParameter("DYM", DYM) //动液面
+                                .addParameter("YYMD", DMYYMD) //原油密度
+                                .addParameter("TRQXDMD", TRQXDMD) //天然气相对密度
+                                .addParameter("SMD", DCSMD)//水密度
+                                .addParameter("QYB", QYB)//生产汽油比
+                                .addParameter("BENG_SHEN", BS)//泵深
+                                .addParameter("BZSZ", -1)//标准上载
+                                .addParameter("BZXZ", -1)//标准下载
+                                .addParameter("SAVE_TIME", new Date())//
+                                .addParameter("DATE_TIME", c.getTime())//
+                                .addParameter("CHONG_CHENG", CHONG_CHONG)//冲程
+                                .addParameter("CHONG_CI", CHONG_CI)//冲次
+                                .addParameter("MIN_ZAIHE", ZXZH)//最小载荷
+                                .addParameter("MAX_ZAIHE", ZDZH)//最大载荷
+                                .addParameter("WEIYI", WEIYI)//位移
+                                .addParameter("ZAIHE", ZAIHE)//载荷
+                                .addParameter("PHL", PHL)//平衡率
+                                .addParameter("PHL1", PHL1)//平衡率
+                                .addParameter("HDL", HDL)//耗电量
+                                .addParameter("CYL", CYL)//产液量
+                                .addParameter("YL", YL)//油量
+                                .addParameter("LJHDL", LJHDL)//累积耗电量
+                                .addParameter("LJCYL", LJCYL)//累积产液量
+                                .addParameter("LJYL", LJYL)//累积液量
+                                .addParameter("YXSJ", YXSJ)//运行时间
+                                .addParameter("LJYXSJ", LJYXSJ)//累积运行时间
+                                .addParameter("HY", HY)//回压
+                                .addParameter("TY", TY)//套压
+                                .addParameter("WD", WD)//温度
+                                .addParameter("PJDL", PJDL)//平均电流
+                                .addParameter("PJDY", PJDY)//平均电压
+                                .addParameter("SXDL", SXDL)//上行电流
+                                .addParameter("XXDL", XXDL)//下行电流
+                                .addParameter("SXNH", SXNH)//上行能耗
+                                .addParameter("XXNH", XXNH)//下行能耗
+                                .addParameter("PL", PL)//频率
+                                .addParameter("SJD", SJD)//时间段
+                                //.addParameter("BZ", "")//备注
+                                .executeUpdate();//
+                    } catch (Exception e) {
+                        System.out.println("处理井：" + code + "出现异常！" + e.toString());
+                    }
                 } catch (Exception e) {
-                    System.out.println("处理井：" + code + "出现异常！" + e.toString());
                 }
+
             }
         }
         System.out.println("班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
@@ -235,129 +256,183 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
-                String code = youJing.getCode();
+                try {
+                    String code = youJing.getCode();
 
-                String sql = "Insert into T_Well_Daily_Data "
-                        + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
-                        + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,PHL1,HDL,CYL,YL,RLJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,SXNH,XXNH,PL,BX,CQL) "
-                        + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM, :YYMD,:TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
-                        + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:PHL1,:HDL,:CYL,:YL,:RLJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:SXNH,:XXNH,:PL,:BX,:CQL)";
+                    String sql = "Insert into T_Well_Daily_Data "
+                            + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
+                            + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,PHL1,HDL,CYL,YL,RLJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,SXNH,XXNH,PL,BX,CQL) "
+                            + "values (:ID, :CODE, :BENG_JING, :HAN_SHUI, :DYM, :YYMD,:TRQXDMD, :SMD,:QYB,:BENG_SHEN,:BZSZ,:BZXZ,:SAVE_TIME,:DATE_TIME,:CHONG_CHENG,"
+                            + ":CHONG_CI,:MIN_ZAIHE,:MAX_ZAIHE,:WEIYI,:ZAIHE,:PHL,:PHL1,:HDL,:CYL,:YL,:RLJYXSJ,:HY,:TY,:WD,:PJDL,:PJDY,:SXDL,:XXDL,:SXNH,:XXNH,:PL,:BX,:CQL)";
 
-                //源头库中数据
-                Map<String, Object> map = findDataFromYdkByCodeWithBX(code);
-                Float BJ = null, HS = null, BS = null, QYB = null, DMYYMD = null, DCSMD = null, DYM = null, TRQXDMD = null, BX = null, CQL = null;
-                if (map != null) {
-                    BJ = Float.parseFloat(((BigDecimal) map.get("bj")).toString());
-                    HS = Float.parseFloat(((BigDecimal) map.get("hs")).toString());
-                    BS = map.get("bs") == null ? null : Float.parseFloat(((BigDecimal) map.get("bs")).toString());
-                    QYB = map.get("qyb") == null ? null : Float.parseFloat(((BigDecimal) map.get("qyb")).toString());
-                    DMYYMD = map.get("dmyymd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dmyymd")).toString());
-                    DCSMD = map.get("dcsmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dcsmd")).toString());
-                    DYM = map.get("dym") != null ? Float.parseFloat(((BigDecimal) map.get("dym")).toString()) : null;
-                    TRQXDMD = map.get("trqxdmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("trqxdmd")).toString());
-                    BX = map.get("sjbx") == null ? null : Float.parseFloat(((BigDecimal) map.get("sjbx")).toString());
-                    CQL = map.get("rcql") == null ? null : Float.parseFloat(((BigDecimal) map.get("rcql")).toString());
-                }
-                //DYM写入实时库
-                realtimeDataService.putValue(code, RedisKeysEnum.DONG_YE_MIAIN.toString(), DYM == null ? "测不出" : String.valueOf(DYM));
-
-                String ZAIHE = null, WEIYI = null;
-
-                Float CHONG_CHENG = null, CHONG_CI = null, ZDZH = null, ZXZH = null,
-                        PHL = null, PHL1 = null, HDL = null, CYL = null, YL = null, RLJYXSJ = null, HY = null,
-                        TY = null, WD = null, PJDL = null, PJDY = null, SXDL = null, XXDL = null, SXNH = null, XXNH = null, PL = null;
-
-                Calendar startTime = Calendar.getInstance();
-                Calendar endTime = Calendar.getInstance();
-                startTime.set(Calendar.MINUTE, 0);
-                startTime.set(Calendar.SECOND, 0);
-                startTime.set(Calendar.MILLISECOND, 0);
-                startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
-                startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
-                endTime.set(Calendar.MINUTE, 0);
-                endTime.set(Calendar.SECOND, 0);
-                endTime.set(Calendar.MILLISECOND, 0);
-                endTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
-                Map<String, Object> dayMap = getDailyData(code, startTime.getTime(), endTime.getTime());
-                Map<String, Object> dayLatestMap = getLatestDailyData(code, startTime.getTime(), endTime.getTime());
-                if (dayMap != null) {
-                    CHONG_CHENG = dayMap.get("chong_cheng") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_cheng")).toString());
-                    CHONG_CI = dayMap.get("chong_ci") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_ci")).toString());
-                    ZDZH = dayMap.get("zdzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zdzh")).toString());
-                    ZXZH = dayMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zxzh")).toString());
-                    PHL = dayMap.get("phl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("phl")).toString());
-                    PHL1 = dayMap.get("phl1") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("phl1")).toString());
-
-                    HY = dayMap.get("hy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("hy")).toString());
-                    TY = dayMap.get("ty") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("ty")).toString());
-                    WD = dayMap.get("wd") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("wd")).toString());
-                    PJDL = dayMap.get("pjdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdl")).toString());
-                    PJDY = dayMap.get("pjdy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdy")).toString());
-                    SXDL = dayMap.get("sxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxdl")).toString());
-                    XXDL = dayMap.get("xxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxdl")).toString());
-                    SXNH = dayMap.get("sxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxnh")).toString());
-                    XXNH = dayMap.get("xxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxnh")).toString());
-                    PL = dayMap.get("pl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pl")).toString());
-                    if (dayLatestMap != null) {
-                        HDL = dayLatestMap.get("ljhdl") != null ? Float.parseFloat(((BigDecimal) dayLatestMap.get("ljhdl")).toString()) : null;
-                        CYL = dayLatestMap.get("ljcyl") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljcyl")).toString());
-                        YL = dayLatestMap.get("ljyl") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljyl")).toString());
-                        RLJYXSJ = dayLatestMap.get("ljyxsj") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljyxsj")).toString());
+                    //源头库中数据
+                    Map<String, Object> map = findDataFromYdkByCodeWithBX(code);
+                    Float BJ = null, HS = null, BS = null, QYB = null, DMYYMD = null, DCSMD = null, DYM = null, TRQXDMD = null, BX = null, CQL = null;
+                    if (map != null) {
+                        BJ = Float.parseFloat(((BigDecimal) map.get("bj")).toString());
+                        HS = Float.parseFloat(((BigDecimal) map.get("hs")).toString());
+                        BS = map.get("bs") == null ? null : Float.parseFloat(((BigDecimal) map.get("bs")).toString());
+                        QYB = map.get("qyb") == null ? null : Float.parseFloat(((BigDecimal) map.get("qyb")).toString());
+                        DMYYMD = map.get("dmyymd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dmyymd")).toString());
+                        DCSMD = map.get("dcsmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("dcsmd")).toString());
+                        DYM = map.get("dym") != null ? Float.parseFloat(((BigDecimal) map.get("dym")).toString()) : null;
+                        TRQXDMD = map.get("trqxdmd") == null ? null : Float.parseFloat(((BigDecimal) map.get("trqxdmd")).toString());
+                        BX = map.get("sjbx") == null ? null : Float.parseFloat(((BigDecimal) map.get("sjbx")).toString());
+                        CQL = map.get("rcql") == null ? null : Float.parseFloat(((BigDecimal) map.get("rcql")).toString());
                     }
-                }
+                    //DYM写入实时库
+                    realtimeDataService.putValue(code, RedisKeysEnum.DONG_YE_MIAIN.toString(), DYM == null ? "测不出" : String.valueOf(DYM));
 
-                Calendar c = Calendar.getInstance();
-                c.set(Calendar.MINUTE, 0);
-                c.set(Calendar.SECOND, 0);
-                c.set(Calendar.MILLISECOND, 0);
-                c.set(Calendar.HOUR_OF_DAY, 0);
+                    String ZAIHE = null, WEIYI = null;
 
-                try (Connection con = sql2o.open()) {  			//
-                    con.createQuery(sql) //
-                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
-                            .addParameter("CODE", code) //
-                            .addParameter("BENG_JING", BJ)//
-                            .addParameter("HAN_SHUI", HS) //
-                            .addParameter("DYM", DYM) //动液面
-                            .addParameter("YYMD", DMYYMD) //原油密度
-                            .addParameter("TRQXDMD", TRQXDMD) //天然气相对密度
-                            .addParameter("SMD", DCSMD)//水密度
-                            .addParameter("QYB", QYB)//生产汽油比
-                            .addParameter("BENG_SHEN", BS)//泵深
-                            .addParameter("BX", BX)//泵效
-                            .addParameter("CQL", CQL)//产气量
-                            .addParameter("BZSZ", -1)//标准上载
-                            .addParameter("BZXZ", -1)//标准下载
-                            .addParameter("SAVE_TIME", new Date())//
-                            .addParameter("DATE_TIME", c.getTime())//
-                            .addParameter("CHONG_CHENG", CHONG_CHENG)//冲程
-                            .addParameter("CHONG_CI", CHONG_CI)//冲次
-                            .addParameter("MIN_ZAIHE", ZXZH)//最小载荷
-                            .addParameter("MAX_ZAIHE", ZDZH)//最大载荷
-                            .addParameter("WEIYI", WEIYI)//位移
-                            .addParameter("ZAIHE", ZAIHE)//载荷
-                            .addParameter("PHL", PHL)//平衡率
-                            .addParameter("PHL1", PHL1)//电流平衡率
-                            .addParameter("HDL", HDL)//耗电量
-                            .addParameter("CYL", CYL)//产液量
-                            .addParameter("YL", YL)//油量
-                            .addParameter("RLJYXSJ", RLJYXSJ)//运行时间
-                            .addParameter("HY", HY)//回压
-                            .addParameter("TY", TY)//套压
-                            .addParameter("WD", WD)//温度
-                            .addParameter("PJDL", PJDL)//平均电流
-                            .addParameter("PJDY", PJDY)//平均电压
-                            .addParameter("SXDL", SXDL)//上行电流
-                            .addParameter("XXDL", XXDL)//下行电流
-                            .addParameter("SXNH", SXNH)//上行能耗
-                            .addParameter("XXNH", XXNH)//下行能耗
-                            .addParameter("PL", PL)//频率
-                            //.addParameter("BZ", "")//备注
+                    Float CHONG_CHENG = null, CHONG_CI = null, ZDZH = null, ZXZH = null,
+                            PHL = null, PHL1 = null, HDL = null, CYL = null, YL = null, RLJYXSJ = null, HY = null,
+                            TY = null, WD = null, PJDL = null, PJDY = null, SXDL = null, XXDL = null, SXNH = null, XXNH = null, PL = null;
 
-                            .executeUpdate();//
+                    Calendar startTime = Calendar.getInstance();
+                    Calendar endTime = Calendar.getInstance();
+                    startTime.set(Calendar.MINUTE, 0);
+                    startTime.set(Calendar.SECOND, 0);
+                    startTime.set(Calendar.MILLISECOND, 0);
+                    startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
+                    startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
+                    endTime.set(Calendar.MINUTE, 0);
+                    endTime.set(Calendar.SECOND, 0);
+                    endTime.set(Calendar.MILLISECOND, 0);
+                    endTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
+                    Map<String, Object> dayMap = getDailyData(code, startTime.getTime(), endTime.getTime());
+                    Map<String, Object> dayLatestMap = getLatestDailyData(code, startTime.getTime(), endTime.getTime());
+                    if (dayMap != null) {
+                        CHONG_CHENG = dayMap.get("chong_cheng") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_cheng")).toString());
+                        CHONG_CI = dayMap.get("chong_ci") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_ci")).toString());
+                        ZDZH = dayMap.get("zdzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zdzh")).toString());
+                        ZXZH = dayMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zxzh")).toString());
+                        PHL = dayMap.get("phl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("phl")).toString());
+                        PHL1 = dayMap.get("phl1") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("phl1")).toString());
+
+                        HY = dayMap.get("hy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("hy")).toString());
+                        TY = dayMap.get("ty") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("ty")).toString());
+                        WD = dayMap.get("wd") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("wd")).toString());
+                        PJDL = dayMap.get("pjdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdl")).toString());
+                        PJDY = dayMap.get("pjdy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdy")).toString());
+                        SXDL = dayMap.get("sxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxdl")).toString());
+                        XXDL = dayMap.get("xxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxdl")).toString());
+                        SXNH = dayMap.get("sxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxnh")).toString());
+                        XXNH = dayMap.get("xxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxnh")).toString());
+                        PL = dayMap.get("pl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pl")).toString());
+                        if (dayLatestMap != null) {
+                            HDL = dayLatestMap.get("ljhdl") != null ? Float.parseFloat(((BigDecimal) dayLatestMap.get("ljhdl")).toString()) : null;
+                            CYL = dayLatestMap.get("ljcyl") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljcyl")).toString());
+                            YL = dayLatestMap.get("ljyl") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljyl")).toString());
+                            RLJYXSJ = dayLatestMap.get("ljyxsj") == null ? null : Float.parseFloat(((BigDecimal) dayLatestMap.get("ljyxsj")).toString());
+                        }
+                    }
+
+                    Calendar c = Calendar.getInstance();
+                    c.set(Calendar.MINUTE, 0);
+                    c.set(Calendar.SECOND, 0);
+                    c.set(Calendar.MILLISECOND, 0);
+                    c.set(Calendar.HOUR_OF_DAY, 0);
+
+                    try (Connection con = sql2o.open()) {  			//
+                        con.createQuery(sql) //
+                                .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
+                                .addParameter("CODE", code) //
+                                .addParameter("BENG_JING", BJ)//
+                                .addParameter("HAN_SHUI", HS) //
+                                .addParameter("DYM", DYM) //动液面
+                                .addParameter("YYMD", DMYYMD) //原油密度
+                                .addParameter("TRQXDMD", TRQXDMD) //天然气相对密度
+                                .addParameter("SMD", DCSMD)//水密度
+                                .addParameter("QYB", QYB)//生产汽油比
+                                .addParameter("BENG_SHEN", BS)//泵深
+                                .addParameter("BX", BX)//泵效
+                                .addParameter("CQL", CQL)//产气量
+                                .addParameter("BZSZ", -1)//标准上载
+                                .addParameter("BZXZ", -1)//标准下载
+                                .addParameter("SAVE_TIME", new Date())//
+                                .addParameter("DATE_TIME", c.getTime())//
+                                .addParameter("CHONG_CHENG", CHONG_CHENG)//冲程
+                                .addParameter("CHONG_CI", CHONG_CI)//冲次
+                                .addParameter("MIN_ZAIHE", ZXZH)//最小载荷
+                                .addParameter("MAX_ZAIHE", ZDZH)//最大载荷
+                                .addParameter("WEIYI", WEIYI)//位移
+                                .addParameter("ZAIHE", ZAIHE)//载荷
+                                .addParameter("PHL", PHL)//平衡率
+                                .addParameter("PHL1", PHL1)//电流平衡率
+                                .addParameter("HDL", HDL)//耗电量
+                                .addParameter("CYL", CYL)//产液量
+                                .addParameter("YL", YL)//油量
+                                .addParameter("RLJYXSJ", RLJYXSJ)//运行时间
+                                .addParameter("HY", HY)//回压
+                                .addParameter("TY", TY)//套压
+                                .addParameter("WD", WD)//温度
+                                .addParameter("PJDL", PJDL)//平均电流
+                                .addParameter("PJDY", PJDY)//平均电压
+                                .addParameter("SXDL", SXDL)//上行电流
+                                .addParameter("XXDL", XXDL)//下行电流
+                                .addParameter("SXNH", SXNH)//上行能耗
+                                .addParameter("XXNH", XXNH)//下行能耗
+                                .addParameter("PL", PL)//频率
+                                //.addParameter("BZ", "")//备注
+
+                                .executeUpdate();//
+                    } catch (Exception e) {
+                        System.out.println("e:" + e.getMessage());//
+                    }
+
+
+                    Float LJHDL = 0F;
+                    //电表读数
+                    String currentNum = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
+                    try {
+                        if (currentNum != null) {
+                            String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
+                            if (zeroNum != null) {
+                                LJHDL = Float.valueOf(currentNum) - Float.valueOf(zeroNum);
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    //写入电表读数
+                    realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString(), currentNum == null ? "0" : currentNum);
+
+                    String jzrSql = "Insert into QYSCZH.SCY_SRD_YJ "
+                            + "(JH, RQ, SCSJ, CC, CC1,TY,HY,RCYL1,DY,SXDL,XXDL,HDL,JKWD,GXSJ,GXR,DBDS,RCYL,HS) "
+                            + "values (:JH, :RQ, :SCSJ, :CC, :CC1,:TY,:HY,:RCYL1,:DY,:SXDL,:XXDL,:HDL,:JKWD,:GXSJ,:GXR,:DBDS,:RCYL,:HS)";
+
+                    try (Connection con = sql2o.open()) {  			//
+                        con.createQuery(jzrSql) //
+                                //                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
+                                .addParameter("JH", code) //井号
+                                .addParameter("RQ", c.getTime())//日期
+                                .addParameter("SCSJ", RLJYXSJ) //生产时间
+                                .addParameter("CC", CHONG_CHENG) //冲程
+                                .addParameter("CC1", CHONG_CI) //冲次
+                                .addParameter("TY", TY) //套压
+                                .addParameter("HY", HY)//回压
+                                .addParameter("RCYL1", CYL)//日产液量
+                                .addParameter("DY", PJDY)//电压
+                                .addParameter("SXDL", SXDL)//上行电流
+                                .addParameter("XXDL", XXDL)//下行电流
+                                .addParameter("HDL", LJHDL)//耗电量
+                                .addParameter("JKWD", WD)//井口温度
+                                .addParameter("GXSJ", new Date())//更新时间
+                                .addParameter("GXR", "管理员")//更新人
+                                .addParameter("DBDS", currentNum)//电表读数
+                                .addParameter("RCYL", YL)//日产油量
+                                .addParameter("HS", HS)//含水
+                                //.addParameter("BZ", "")//备注
+
+                                .executeUpdate();//
+                    } catch (Exception e) {
+                        System.out.println("e:" + e.getMessage());//
+                    }
                 } catch (Exception e) {
-                    System.out.println("e:" + e.getMessage());//
                 }
+
             }
         }
         System.out.println("日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
@@ -558,5 +633,70 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 2);
         System.out.println(sdf.format(startTime.getTime()));
 
+    }
+
+    @Override
+    public void testMathod() {
+        log.info("开始测试……");
+        String code = "GD1-13X818";
+
+        Float LJHDL = 0f;
+        //累积用电量
+        String currentNum = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
+        if (currentNum != null) {
+            String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
+            LJHDL = Float.valueOf(currentNum) - Float.valueOf(zeroNum);
+        }
+
+        Float LJCYL = 0f;
+        Float LJYL = 0f;
+        Float LJYXSJ = 0f;
+        Float HDL = LJHDL;
+
+        Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString())) / 12;
+        Float YL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString())) / 12;
+
+
+        String querySql = "select HDL, CYL, YL, YXSJ from T_Well_Hourly_Data where code=:CODE and DATE_TIME=:DATE_TIME";
+
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        while (cal.get(Calendar.HOUR_OF_DAY) != 8) {
+            if (cal.get(Calendar.HOUR_OF_DAY) % 2 != 0) {   //偶数点
+                cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
+                continue;
+            }
+            try (Connection con = sql2o.open()) {
+                log.info("计算日期：" + LocalDateTime.fromCalendarFields(cal).toString("yyyy-MM-dd HH:mm:ss"));
+                List<WellHourlyData> list = con.createQuery(querySql)
+                        .setAutoDeriveColumnNames(true)
+                        .addParameter("CODE", code)
+                        .addParameter("DATE_TIME", cal.getTime())
+                        .executeAndFetch(WellHourlyData.class);
+                if (list != null && !list.isEmpty()) {
+                    WellHourlyData data = list.get(0);
+                    LJCYL += data.getCyl() == null ? 0f : data.getCyl();
+                    log.info("产液量：" + data.getCyl());
+                    log.info("累积产液量：" + LJCYL);
+                    LJYL += data.getYl() == null ? 0f : data.getYl();
+                    log.info("油量：" + data.getYl());
+                    log.info("累积油量：" + LJYL);
+                    LJYXSJ += data.getYxsj() == null ? 0f : data.getYxsj();
+                    HDL -= data.getHdl() == null ? 0f : data.getHdl();
+                }
+            }
+            cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
+        }
+        LJCYL += CYL == null ? 0f : CYL;
+        LJYL += YL == null ? 0f : YL;
+        log.info("--------累积产液量：" + LJCYL);
+        log.info("--------累积油量：" + LJYL);
+
+//        LJYXSJ += YXSJ == null ? 0f : YXSJ;
+
+        log.info("结束测试……");
     }
 }

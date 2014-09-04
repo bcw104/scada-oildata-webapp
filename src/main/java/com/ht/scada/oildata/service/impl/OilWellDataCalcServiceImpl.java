@@ -13,7 +13,6 @@ import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.entity.SoeRecord;
 import com.ht.scada.data.service.RealtimeDataService;
-import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -187,11 +186,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     c.set(Calendar.SECOND, 0);
                     c.set(Calendar.MILLISECOND, 0);
                     int hour = c.get(Calendar.HOUR_OF_DAY);
-                    
-                    if(c.get(Calendar.HOUR_OF_DAY) % 2 != 0) {
-                        c.set(Calendar.HOUR_OF_DAY, hour);
-                    } else {
+
+                    if (hour % 2 != 0) {
                         c.set(Calendar.HOUR_OF_DAY, hour + 1);
+                    } else {
+                        c.set(Calendar.HOUR_OF_DAY, hour);
                     }
                     String SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
 
@@ -433,14 +432,13 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
                 } catch (Exception e) {
                 }
-
             }
         }
         System.out.println("日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
     /**
-     * 从源头库查询数据
+     * 从源头库查询数据 泵径、含水、泵深、气油比、地面原油密度、地层水密度、动液面、天然气相对密度
      *
      * @param code
      * @return
@@ -464,7 +462,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
     }
 
     /**
-     * 从源头库查询数据(带泵效、产气量)
+     * 从源头库查询数据(带泵效、产气量) 泵径、含水、泵深、气油比、日产气量、地面原油密度、地层水密度、动液面、天然气相对密度、泵效
      *
      * @param code
      * @return
@@ -487,9 +485,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         return null;
     }
 
-//     Float CHONG_CHENG = null, CHONG_CI = null, ZDZH = null, ZXZH = null,
-//                        PHL = null, PHL1 = null, HDL = null, CYL = null, YL = null, RLJYXSJ = null, HY = null,
-//                        TY = null, WD = null, PJDL = null, PJDY = null, SXDL = null, XXDL = null, SXNH = null, XXNH = null, PL = null;
     /**
      * 从T_WELL_HOURLY_DATA中计算日数据
      *
@@ -639,64 +634,77 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
     @Override
     public void testMathod() {
         log.info("开始测试……");
-        String code = "GD1-13X818";
-
-        Float LJHDL = 0f;
-        //累积用电量
-        String currentNum = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
-        if (currentNum != null) {
-            String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
-            LJHDL = Float.valueOf(currentNum) - Float.valueOf(zeroNum);
-        }
-
-        Float LJCYL = 0f;
-        Float LJYL = 0f;
-        Float LJYXSJ = 0f;
-        Float HDL = LJHDL;
-
-        Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString())) / 12;
-        Float YL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString())) / 12;
-
-
-        String querySql = "select HDL, CYL, YL, YXSJ from T_Well_Hourly_Data where code=:CODE and DATE_TIME=:DATE_TIME";
-
-
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        while (cal.get(Calendar.HOUR_OF_DAY) != 8) {
-            if (cal.get(Calendar.HOUR_OF_DAY) % 2 != 0) {   //偶数点
-                cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
-                continue;
-            }
-            try (Connection con = sql2o.open()) {
-                log.info("计算日期：" + LocalDateTime.fromCalendarFields(cal).toString("yyyy-MM-dd HH:mm:ss"));
-                List<WellHourlyData> list = con.createQuery(querySql)
-                        .setAutoDeriveColumnNames(true)
-                        .addParameter("CODE", code)
-                        .addParameter("DATE_TIME", cal.getTime())
-                        .executeAndFetch(WellHourlyData.class);
-                if (list != null && !list.isEmpty()) {
-                    WellHourlyData data = list.get(0);
-                    LJCYL += data.getCyl() == null ? 0f : data.getCyl();
-                    log.info("产液量：" + data.getCyl());
-                    log.info("累积产液量：" + LJCYL);
-                    LJYL += data.getYl() == null ? 0f : data.getYl();
-                    log.info("油量：" + data.getYl());
-                    log.info("累积油量：" + LJYL);
-                    LJYXSJ += data.getYxsj() == null ? 0f : data.getYxsj();
-                    HDL -= data.getHdl() == null ? 0f : data.getHdl();
-                }
-            }
-            cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
-        }
-        LJCYL += CYL == null ? 0f : CYL;
-        LJYL += YL == null ? 0f : YL;
-        log.info("--------累积产液量：" + LJCYL);
-        log.info("--------累积油量：" + LJYL);
+//        String code = "GD1-13X818";
+//
+//        Float LJHDL = 0f;
+//        //累积用电量
+//        String currentNum = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.DL_ZX_Z.toString().toLowerCase());
+//        if (currentNum != null) {
+//            String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
+//            LJHDL = Float.valueOf(currentNum) - Float.valueOf(zeroNum);
+//        }
+//
+//        Float LJCYL = 0f;
+//        Float LJYL = 0f;
+//        Float LJYXSJ = 0f;
+//        Float HDL = LJHDL;
+//
+//        Float CYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_CYL.toString())) / 12;
+//        Float YL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString()) == null ? null : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_SS_YL.toString())) / 12;
+//
+//
+//        String querySql = "select HDL, CYL, YL, YXSJ from T_Well_Hourly_Data where code=:CODE and DATE_TIME=:DATE_TIME";
+//
+//
+//        Calendar cal = Calendar.getInstance();
+//        cal.set(Calendar.MINUTE, 0);
+//        cal.set(Calendar.SECOND, 0);
+//        cal.set(Calendar.MILLISECOND, 0);
+//        while (cal.get(Calendar.HOUR_OF_DAY) != 8) {
+//            if (cal.get(Calendar.HOUR_OF_DAY) % 2 != 0) {   //偶数点
+//                cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
+//                continue;
+//            }
+//            try (Connection con = sql2o.open()) {
+//                log.info("计算日期：" + LocalDateTime.fromCalendarFields(cal).toString("yyyy-MM-dd HH:mm:ss"));
+//                List<WellHourlyData> list = con.createQuery(querySql)
+//                        .setAutoDeriveColumnNames(true)
+//                        .addParameter("CODE", code)
+//                        .addParameter("DATE_TIME", cal.getTime())
+//                        .executeAndFetch(WellHourlyData.class);
+//                if (list != null && !list.isEmpty()) {
+//                    WellHourlyData data = list.get(0);
+//                    LJCYL += data.getCyl() == null ? 0f : data.getCyl();
+//                    log.info("产液量：" + data.getCyl());
+//                    log.info("累积产液量：" + LJCYL);
+//                    LJYL += data.getYl() == null ? 0f : data.getYl();
+//                    log.info("油量：" + data.getYl());
+//                    log.info("累积油量：" + LJYL);
+//                    LJYXSJ += data.getYxsj() == null ? 0f : data.getYxsj();
+//                    HDL -= data.getHdl() == null ? 0f : data.getHdl();
+//                }
+//            }
+//            cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) - 1);
+//        }
+//        LJCYL += CYL == null ? 0f : CYL;
+//        LJYL += YL == null ? 0f : YL;
+//        log.info("--------累积产液量：" + LJCYL);
+//        log.info("--------累积油量：" + LJYL);
 
 //        LJYXSJ += YXSJ == null ? 0f : YXSJ;
+
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+
+        if (hour % 2 != 0) {
+            c.set(Calendar.HOUR_OF_DAY, hour + 1);
+        } else {
+            c.set(Calendar.HOUR_OF_DAY, hour);
+        }
+        String SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
 
         log.info("结束测试……");
     }

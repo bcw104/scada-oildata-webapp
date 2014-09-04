@@ -60,7 +60,7 @@ public class Scheduler {
     /**
      * 每隔30分钟定时任务
      */
-    @Scheduled(cron = "0 0/30 * * * ? ")
+//    @Scheduled(cron = "0 0/30 * * * ? ")
     private void hourly30Task() {
         oilProductCalcService.oilProductCalcTask();   //功图分析
     }
@@ -68,7 +68,7 @@ public class Scheduler {
     /**
      * 每天7点半将报表数据写入数据库
      */
-//    @Scheduled(cron = "0 55 7 * * ? ")
+    @Scheduled(cron = "0 55 7 * * ? ")
     private void reportTask() {
         oilWellDataCalcService.runRiBaoTask();
     }
@@ -76,7 +76,7 @@ public class Scheduler {
     /**
      * 9、11、13、15、17、19、21、23、1、3、5、7
      */
-//    @Scheduled(cron = "0 45 1/2 * * ? ")
+    @Scheduled(cron = "0 45 1/2 * * ? ")
     private void banbaoTask() {
         oilWellDataCalcService.runBanBaoTask();
     }

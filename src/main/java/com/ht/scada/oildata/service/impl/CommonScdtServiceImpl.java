@@ -5,30 +5,21 @@
 package com.ht.scada.oildata.service.impl;
 
 import com.ht.scada.common.tag.entity.EndTag;
-import com.ht.scada.common.tag.entity.WellHourlyData;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
-import com.ht.scada.data.entity.SoeRecord;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.oildata.service.CommonScdtService;
-import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import javax.inject.Inject;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.sql2o.Connection;
 import org.sql2o.Sql2o;
 
 /**

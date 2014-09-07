@@ -13,6 +13,7 @@ import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
+import com.ht.scada.oildata.calc.GTCalc;
 import com.ht.scada.oildata.calc.GTDataComputerProcess;
 import com.ht.scada.oildata.calc.GTReturnKeyEnum;
 import com.ht.scada.oildata.model.GTSC;
@@ -150,7 +151,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                         realtimeDataService.putValue(code, RedisKeysEnum.ZR_YL.toString(), shYL); //昨日产油量
 
                         /**
-                         * **************** 威尔泰克功图 ******************
+                         * ****************START 威尔泰克功图 ******************
                          */
                         float wetkCyl = gtsc.getRCYL1();
                         float wetkYl = gtsc.getRCYL();
@@ -216,7 +217,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             realtimeDataService.putValue(code, RedisKeysEnum.WETK_BGT.toString(), bgt_zaihe); //泵功图
                         }
                         /**
-                         * **************** 威尔泰克功图 ******************
+                         * ****************END 威尔泰克功图 ******************
                          */
                         realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), shNH);  //昨日耗电量
                         realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_HDL.toString(), ljNH);
@@ -232,6 +233,12 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                         realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV_DL.toString(), phddl);
                         realtimeDataService.putValue(code, RedisKeysEnum.DL_SHANG.toString(), sxdl);
                         realtimeDataService.putValue(code, RedisKeysEnum.DL_XIA.toString(), xxdl);
+                        
+                        float calc[] = GTCalc.getGTCalcResult(weiyi, zaihe, chongCi);
+                        String gtmj = String.valueOf(calc[0]);
+                        String glgl = String.valueOf(calc[1]);
+                        realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), gtmj);
+                        realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), glgl);
                         //TODU:写历史数据
                     }
                 } catch (Exception e) {

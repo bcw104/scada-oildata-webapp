@@ -1,7 +1,9 @@
 package com.ht.scada.oildata;
 
+import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
+import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,10 +27,13 @@ public class Scheduler {
     @Autowired
     private OilWellDataCalcService oilWellDataCalcService;  //油井日报班报
     @Autowired
+    private WaterWellDataCalcService waterWellDataCalcService;  //水井日报班报
+    @Autowired
     private WetkSgtInsertService wetkSgtInsertService;      //威尔泰克功图数据写入
     @Autowired
     private WellInfoInsertService wellInfoInsertService;    //油井信息录入
-
+    @Autowired
+    private CommonScdtService commonScdtService;    
 
     /**
      * 测试你的方法，启动时运行
@@ -39,6 +44,9 @@ public class Scheduler {
 //        wetkSgtInsertService.wetkTask();     //威尔泰克功图
 //        oilProductCalcService.oilProductCalcTask();   //功图分析
 //        wellInfoInsertService.wellInfoSaveTask(); //井基本数据录入任务
+//        waterWellDataCalcService.runBanBaoTask();
+//        waterWellDataCalcService.runRiBaoTask();
+//        commonScdtService.wellClosedInfo();
     }
 
     /**
@@ -54,7 +62,7 @@ public class Scheduler {
      */
 //    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
-        wetkSgtInsertService.wetkTask();     //威尔泰克功图
+        wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
     }
 
     /**
@@ -79,6 +87,7 @@ public class Scheduler {
     @Scheduled(cron = "0 45 1/2 * * ? ")
     private void banbaoTask() {
         oilWellDataCalcService.runBanBaoTask();
+        commonScdtService.wellClosedInfo();
     }
 
 }

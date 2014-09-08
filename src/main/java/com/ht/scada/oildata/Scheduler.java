@@ -1,11 +1,18 @@
 package com.ht.scada.oildata;
 
+import com.ht.scada.common.tag.entity.EndTag;
+import com.ht.scada.common.tag.service.EndTagService;
+import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
+import com.ht.scada.oildata.service.ScslService;
 import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -34,11 +41,20 @@ public class Scheduler {
     private WellInfoInsertService wellInfoInsertService;    //油井信息录入
     @Autowired
     private CommonScdtService commonScdtService;    
+    @Autowired
+    private ScslService scslService;
+    @Autowired
+    private EndTagService endTagService;
+    
+    public static List<EndTag> youJingList;
+    public static List<EndTag> shuiJingList;
+    public static List<String> youCodeList = new ArrayList<>();
 
     /**
      * 测试你的方法，启动时运行
      */
     private void testYourMathod() {
+        init();
 //        oilWellDataCalcService.runRiBaoTask();
 //        oilWellDataCalcService.runBanBaoTask();
 //        wetkSgtInsertService.wetkTask();     //威尔泰克功图
@@ -47,6 +63,16 @@ public class Scheduler {
 //        waterWellDataCalcService.runBanBaoTask();
 //        waterWellDataCalcService.runRiBaoTask();
 //        commonScdtService.wellClosedInfo();
+//        scslService.calcOilWellScsj();
+//        scslService.calcWaterWellScsj(Calendar.getInstance());
+        
+    }
+    private void init() {
+        youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        shuiJingList = endTagService.getByType(EndTagTypeEnum.ZHU_SHUI_JING.toString());
+        for(EndTag endTag : youJingList) {
+            youCodeList.add(endTag.getCode());
+        }
     }
 
     /**
@@ -63,31 +89,46 @@ public class Scheduler {
 //    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
+        oilProductCalcService.oilProductCalcTask();   //功图分析计算
     }
 
-    /**
-     * 每隔30分钟定时任务
-     */
-//    @Scheduled(cron = "0 0/30 * * * ? ")
-    private void hourly30Task() {
-        oilProductCalcService.oilProductCalcTask();   //功图分析
-    }
-
-    /**
-     * 每天7点半将报表数据写入数据库
-     */
-    @Scheduled(cron = "0 55 7 * * ? ")
-    private void reportTask() {
-        oilWellDataCalcService.runRiBaoTask();
-    }
-
+    
     /**
      * 9、11、13、15、17、19、21、23、1、3、5、7
      */
-    @Scheduled(cron = "0 45 1/2 * * ? ")
-    private void banbaoTask() {
+//    @Scheduled(cron = "0 45 1/2 * * ? ")
+    private void oilBanBaoTask() {
         oilWellDataCalcService.runBanBaoTask();
         commonScdtService.wellClosedInfo();
+    }
+    
+    /**
+     * 每天7点半将报表数据写入数据库
+     */
+//    @Scheduled(cron = "0 55 7 * * ? ")
+    private void oilRiBaoTask() {
+        oilWellDataCalcService.runRiBaoTask();
+    }
+
+    @Scheduled(cron = "0 50 1/2 * * ? ")
+    private void waterBanBaoTask() {
+        waterWellDataCalcService.runBanBaoTask();
+    }
+    
+    @Scheduled(cron = "0 58 7 * * ? ")
+    private void waterRiBaoTask() {
+        waterWellDataCalcService.runRiBaoTask();
+    }
+    
+    /**
+     * 每隔一分钟任务
+     */
+//    @Scheduled(cron = "0 0/1 * * * ? ")
+    private void minite1Task() {
+        Calendar c = Calendar.getInstance();
+        scslService.calcOilWellScsj(c);
+        scslService.calcWaterWellScsj(c);
+        
     }
 
 }

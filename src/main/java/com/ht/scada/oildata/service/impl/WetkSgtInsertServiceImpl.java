@@ -7,10 +7,12 @@ package com.ht.scada.oildata.service.impl;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
+import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
+import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.entity.WetkSGT;
 import com.ht.scada.oildata.service.WetkSGTService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
@@ -36,13 +38,10 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
 
     private static final Logger log = LoggerFactory.getLogger(WetkSgtInsertServiceImpl.class);
     @Autowired
-    private EndTagService endTagService;
-    @Autowired
     private RealtimeDataService realtimeDataService;
     @Autowired
     private WetkSGTService wetkSGTService;
     private Map<String, String> dateMap = new HashMap<>();
-    private Map<String, String> myDateMap = new HashMap<>();
     @Inject
     protected Sql2o sql2o;
 
@@ -66,10 +65,12 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
         String gtId;
         float CC, CC1, ZDZH, ZXZH;
 
-        List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
-        if (youJingList != null && youJingList.size() > 0) {
-            for (EndTag youJing : youJingList) {
+        if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
+            for (EndTag youJing : Scheduler.youJingList) {
                 try {
+                    if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
+                        continue;
+                    }
                     String code = youJing.getCode();
                     // 1.判断功图时间是否更新
                     String newDateTime = realtimeDataService.getEndTagVarYcArray(code, RedisKeysEnum.GT_DATETIME.toString());

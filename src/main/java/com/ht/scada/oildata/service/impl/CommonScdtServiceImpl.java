@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
+import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,9 +78,19 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         log.info("开始更新关井原因——现在时刻：" + CommonUtils.date2String(new Date()));
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         Map<String, String> map = getClosedInfo();
+        Map<String, String> ctjMap = getChangTingClosedInfo();
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
-                if(map.get(youJing.getCode()) != null) {
+                //长停井
+                if(ctjMap.get(youJing.getCode()) != null) {
+                    System.out.println("长停井：" + youJing.getCode());
+                    realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.CTJ.toString(), map.get(youJing.getCode())!=null?"长停井：" + map.get(youJing.getCode()):"长停井");
+                } else {
+                    realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.CTJ.toString(), "");
+                }
+                //措施关井
+                if (map.get(youJing.getCode()) != null) {
+                    System.out.println("措施关井：" + youJing.getCode());
                     realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.GJYY.toString(), map.get(youJing.getCode()));
                 } else {
                     realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.GJYY.toString(), "");
@@ -88,14 +99,14 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         }
         log.info("完成更新关井原因——现在时刻：" + CommonUtils.date2String(new Date()));
     }
-    
+
     private Map<String, String> getClosedInfo() {
         Calendar c = Calendar.getInstance();
-                c.set(Calendar.MINUTE, 0);
-                c.set(Calendar.SECOND, 0);
-                c.set(Calendar.MILLISECOND, 0);
-                c.set(Calendar.HOUR_OF_DAY, 0);
-        
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+
         Map<String, String> map = new HashMap<>();
 
         String sql = "select a.JH jh,a.RQ rq,b.DMMC dmmc,a.BZ bz FROM YS_DBA01@YDK a left join FLA15@YDK b on a.bzdm=b.dm  where a.RQ=:dateTime " + //
@@ -106,9 +117,41 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             query.addParameter("dateTime", c.getTime());
             List<Row> dataList = query.executeAndFetchTable().rows();
             for (Row row : dataList) {
-                String bz = row.getString("BZ")==null?"":":"+row.getString("BZ");
-                map.put(row.getString("jh"), row.getString("dmmc")+bz);
+                String bz = row.getString("BZ") == null ? "" : ":" + row.getString("BZ");
+                map.put(row.getString("jh"), row.getString("dmmc") + bz);
 //                log.info(map.get(row.getString("jh")));
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 一个月内生产时间平均值为0
+     * @return 
+     */
+    private Map<String, String> getChangTingClosedInfo() {
+        Calendar endTime = Calendar.getInstance();
+        Calendar startTime = Calendar.getInstance();
+        startTime.set(Calendar.MONTH, endTime.get(Calendar.MONTH) - 1);
+
+//        System.out.println(LocalDateTime.fromCalendarFields(startTime));
+//        System.out.println(LocalDateTime.fromCalendarFields(endTime));
+
+        Map<String, String> map = new HashMap<>();
+
+        String sql = "select * from (select avg(scsj) a,jh FROM YS_DBA01@YDK where jh in (select code from t_end_tag where type='YOU_JING')  "
+                + " and rq>=:startTime and rq<=:endTime group by jh) "
+                + " where a<1 ";
+
+        try (Connection con = sql2o.open()) {
+            org.sql2o.Query query = con.createQuery(sql);
+            query.addParameter("startTime", startTime.getTime());
+            query.addParameter("endTime", endTime.getTime());
+            List<Row> dataList = query.executeAndFetchTable().rows();
+            for (Row row : dataList) {
+//                String bz = row.getString("BZ") == null ? "" : ":" + row.getString("BZ");
+                map.put(row.getString("jh"), "CTJ");
+                log.info(map.get(row.getString("jh")));
             }
         }
         return map;

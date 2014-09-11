@@ -12,6 +12,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.joda.time.LocalDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @Service("wellInfoInsertService")
 public class WellInfoInsertServiceImpl implements WellInfoInsertService {
+    
+    private static final Logger log = LoggerFactory.getLogger(WellInfoInsertServiceImpl.class);
 
     @Autowired
     private WellInfoService wellInfoService;
@@ -34,7 +38,7 @@ public class WellInfoInsertServiceImpl implements WellInfoInsertService {
      */
     @Override
     public void wellInfoSaveTask() {
-        System.out.println("开始录入井信息：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("开始录入井信息：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
 
         List<Map<String, Object>> allEndtagsCode = wellInfoService.findAllEndtagsCode();
         for (int i = 0; i < allEndtagsCode.size(); i++) {
@@ -60,6 +64,6 @@ public class WellInfoInsertServiceImpl implements WellInfoInsertService {
             } catch (Exception e) {
             }
         }
-        System.out.println("完成录入井信息：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("完成录入井信息：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 }

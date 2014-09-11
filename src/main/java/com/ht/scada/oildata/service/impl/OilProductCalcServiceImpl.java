@@ -62,7 +62,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
 
     @Override
     public void oilProductCalcTask() {
-        System.out.println("开启功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("开启功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
             for (EndTag youJing : Scheduler.youJingList) {
                 try {
@@ -150,7 +150,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             realtimeDataService.putValue(code, RedisKeysEnum.DL_XIA.toString(), xxdl);
                             realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV_DL.toString(), phddl);
                         } catch (Exception e) {
-                            System.out.println(code + "功图分析出现异常：" + e.toString());
+                            log.info(code + "功图分析出现异常：" + e.toString());
                         }
 
                         //***************START 威尔泰克功图 ******************
@@ -184,7 +184,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                 }
             }
         }
-        System.out.println("完成功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("完成功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
     private GTSC findOneGTFXRecordByCode(String code) {

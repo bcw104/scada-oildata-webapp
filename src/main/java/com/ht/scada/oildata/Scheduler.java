@@ -40,12 +40,11 @@ public class Scheduler {
     @Autowired
     private WellInfoInsertService wellInfoInsertService;    //油井信息录入
     @Autowired
-    private CommonScdtService commonScdtService;    
+    private CommonScdtService commonScdtService;
     @Autowired
     private ScslService scslService;
     @Autowired
     private EndTagService endTagService;
-    
     public static List<EndTag> youJingList;
     public static List<EndTag> shuiJingList;
     public static List<String> youCodeList = new ArrayList<>();
@@ -65,12 +64,13 @@ public class Scheduler {
 //        commonScdtService.wellClosedInfo();
 //        scslService.calcOilWellScsj();
 //        scslService.calcWaterWellScsj(Calendar.getInstance());
-        
+
     }
+
     private void init() {
         youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         shuiJingList = endTagService.getByType(EndTagTypeEnum.ZHU_SHUI_JING.toString());
-        for(EndTag endTag : youJingList) {
+        for (EndTag endTag : youJingList) {
             youCodeList.add(endTag.getCode());
         }
     }
@@ -82,7 +82,7 @@ public class Scheduler {
     private void dailyTask() {
         wellInfoInsertService.wellInfoSaveTask(); //井基本数据录入任务
     }
-    
+
     /**
      * 每隔10分钟定时任务
      */
@@ -92,34 +92,37 @@ public class Scheduler {
         oilProductCalcService.oilProductCalcTask();   //功图分析计算
     }
 
-    
     /**
      * 9、11、13、15、17、19、21、23、1、3、5、7
      */
-//    @Scheduled(cron = "0 45 1/2 * * ? ")
+    @Scheduled(cron = "0 45 1/2 * * ? ")
     private void oilBanBaoTask() {
         oilWellDataCalcService.runBanBaoTask();
-        commonScdtService.wellClosedInfo();
     }
-    
+
     /**
      * 每天7点半将报表数据写入数据库
      */
-//    @Scheduled(cron = "0 55 7 * * ? ")
+    @Scheduled(cron = "0 55 7 * * ? ")
     private void oilRiBaoTask() {
         oilWellDataCalcService.runRiBaoTask();
+    }
+
+    @Scheduled(cron = "0 0 12 * * ? ")
+    private void wellClosedInfo() {
+        commonScdtService.wellClosedInfo();
     }
 
     @Scheduled(cron = "0 50 1/2 * * ? ")
     private void waterBanBaoTask() {
         waterWellDataCalcService.runBanBaoTask();
     }
-    
+
     @Scheduled(cron = "0 58 7 * * ? ")
     private void waterRiBaoTask() {
         waterWellDataCalcService.runRiBaoTask();
     }
-    
+
     /**
      * 每隔一分钟任务
      */
@@ -128,7 +131,6 @@ public class Scheduler {
         Calendar c = Calendar.getInstance();
         scslService.calcOilWellScsj(c);
         scslService.calcWaterWellScsj(c);
-        
-    }
 
+    }
 }

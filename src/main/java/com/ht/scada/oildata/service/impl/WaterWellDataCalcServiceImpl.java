@@ -5,9 +5,7 @@
 package com.ht.scada.oildata.service.impl;
 
 import com.ht.scada.common.tag.entity.EndTag;
-import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
-import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.oildata.Scheduler;
@@ -56,7 +54,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
      */
     @Override
     public void runBanBaoTask() {
-        System.out.println("水井班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("水井班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
         if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
             for (EndTag shuiJing : Scheduler.shuiJingList) {
                 String code = shuiJing.getCode();
@@ -124,7 +122,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                     }
 
                 } catch (Exception e) {
-                    System.out.println(code + ":" + e.toString());
+                    log.info(code + ":" + e.toString());
                 }
 
                 if (shuiJing.getParent() != null) {  //干压
@@ -198,16 +196,16 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .addParameter("SJD", SJD)//时间段
                             .executeUpdate();//
                 } catch (Exception e) {
-                    System.out.println("处理水井：" + code + "出现异常！" + e.toString());
+                    log.info("处理水井：" + code + "出现异常！" + e.toString());
                 }
             }
-            System.out.println("水井班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
+            log.info("水井班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
         }
     }
 
     @Override
     public void runRiBaoTask() {
-        System.out.println("水井日报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("水井日报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
         if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
             for (EndTag shuiJing : Scheduler.shuiJingList) {
                 String code = shuiJing.getCode();
@@ -282,7 +280,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .addParameter("CQL", CQL)//超欠量
                             .executeUpdate();//
                 } catch (Exception e) {
-                    System.out.println("处理水井：" + code + "出现异常！" + e.toString());
+                    log.info("处理水井：" + code + "出现异常！" + e.toString());
                 }
 
                 String jzrSql = "Insert into QYSCZH.SZS_SRD_SJ "
@@ -302,7 +300,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .addParameter("GXR", "管理员")//更新人
                             .executeUpdate();
                 } catch (Exception e) {
-                    System.out.println(code + "发生异常！");
+                    log.info(code + "发生异常！");
                     e.printStackTrace();
                 }
 
@@ -310,7 +308,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), "0");
             }
-            System.out.println("水井日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
+            log.info("水井日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
         }
     }
 
@@ -353,7 +351,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
     private float getYxsj(String code) {
         float yxsj = 0f;
         String sql = "SELECT count(IS_ON) as is_on "
-                + " from T_WATER_WELL_CALC_DATA t where code=:CODE and IS_ON = 0 ";
+                + " from T_WATER_WELL_CALC_DATA t where code=:CODE and IS_ON = 1 ";
 
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {

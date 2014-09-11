@@ -24,7 +24,7 @@
       <pattern>%d %p [%t] [%c]:%L - %m%n</pattern>
     </encoder>
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-      <level>ERROR</level>
+      <level>INFO</level>
     </filter>
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
       <fileNamePattern>log/%d{yyyy-MM-dd-HH'.log'}</fileNamePattern>

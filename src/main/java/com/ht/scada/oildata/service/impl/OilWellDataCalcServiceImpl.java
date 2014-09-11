@@ -60,7 +60,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
      */
     @Override
     public void runBanBaoTask() {
-        System.out.println("班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
             for (EndTag youJing : Scheduler.youJingList) {
                 try {
@@ -305,18 +305,18 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .addParameter("SJD", SJD)//时间段
                                 .executeUpdate();
                     } catch (Exception e) {
-                        System.out.println("处理井：" + code + "出现异常！" + e.toString());
+                        log.info("处理井：" + code + "出现异常！" + e.toString());
                     }
                 } catch (Exception e) {
                 }
             }
         }
-        System.out.println("班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
     @Override
     public void runRiBaoTask() {
-        System.out.println("日报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("日报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
             for (EndTag youJing : Scheduler.youJingList) {
                 try {
@@ -409,7 +409,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     RLJYXSJ = rtYXSJ == null ? null : Float.valueOf(rtYXSJ);
                     CYL = rtCYL == null ? null : Float.valueOf(rtCYL);
                     YL = rtYL == null ? null : Float.valueOf(rtYL);
-                    HDL = rtHDL == null ? null : Float.valueOf(rtHDL);
+                    HDL = rtHDL == null ? 0f : Float.valueOf(rtHDL);
 
                     Calendar c = Calendar.getInstance();
                     c.set(Calendar.MINUTE, 0);
@@ -493,7 +493,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .addParameter("HS", HS)//含水
                                 .executeUpdate();
                     } catch (Exception e) {
-                        System.out.println(code + "发生异常！");
+                        log.info(code + "发生异常！");
                         e.printStackTrace();
                     }
 
@@ -508,7 +508,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     log.info("{} 昨日产液量：{}  昨日产油量：{}", code, cyl[0], cyl[1]);
                     realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(cyl[0])); //昨日产液量
                     realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(cyl[1])); //昨日产油量
-                    realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), RedisKeysEnum.BAN_LJHDL.toString());  //昨日耗电量
+                    realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), String.valueOf(HDL));  //昨日耗电量
 
                     //清除班累积运算值
                     realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
@@ -519,10 +519,10 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                System.out.println(youJing.getCode() + "日报计算结束！");
+                log.info(youJing.getCode() + "日报计算结束！");
             }
         }
-        System.out.println("日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
     /**
@@ -725,9 +725,9 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         endTime.set(Calendar.SECOND, 0);
         endTime.set(Calendar.MILLISECOND, 0);
         startTime.set(Calendar.HOUR_OF_DAY, 1);
-        System.out.println(sdf.format(startTime.getTime()));
+        log.info(sdf.format(startTime.getTime()));
         startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 2);
-        System.out.println(sdf.format(startTime.getTime()));
+        log.info(sdf.format(startTime.getTime()));
 
     }
 
@@ -842,11 +842,12 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         try (Connection con = sql2o.open()) {  //
             org.sql2o.Query query = con.createQuery(sql).addParameter("JH", JH).addParameter("startTime", startTime).addParameter("endTime", endTime);
             List<Row> list = query.executeAndFetchTable().rows();
-
-            if (list != null && !list.isEmpty()) {
+            if (list != null && !list.isEmpty() && list.get(0) != null) {
                 result[0] = list.get(0).getFloat("rcyl1");    //日产液量
                 result[1] = list.get(0).getFloat("rcyl");     //日产油量
             }
+        } catch(Exception e) {
+            log.error(e.getMessage());
         }
         return result;
     }

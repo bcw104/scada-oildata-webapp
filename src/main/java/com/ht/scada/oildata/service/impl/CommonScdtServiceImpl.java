@@ -59,7 +59,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
      */
     @Override
     public void dbdsTask() {
-        System.out.println("开始更新电表读数——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("开始更新电表读数——现在时刻：" + CommonUtils.date2String(new Date()));
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
@@ -69,12 +69,12 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                 realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString(), num);
             }
         }
-        System.out.println("结束更新电表读数——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("结束更新电表读数——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
     @Override
     public void wellClosedInfo() {
-        System.out.println("开始更新关井原因——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("开始更新关井原因——现在时刻：" + CommonUtils.date2String(new Date()));
         List<EndTag> youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         Map<String, String> map = getClosedInfo();
         if (youJingList != null && youJingList.size() > 0) {
@@ -86,7 +86,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                 }
             }
         }
-        System.out.println("完成更新关井原因——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("完成更新关井原因——现在时刻：" + CommonUtils.date2String(new Date()));
     }
     
     private Map<String, String> getClosedInfo() {
@@ -108,7 +108,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             for (Row row : dataList) {
                 String bz = row.getString("BZ")==null?"":":"+row.getString("BZ");
                 map.put(row.getString("jh"), row.getString("dmmc")+bz);
-//                System.out.println(map.get(row.getString("jh")));
+//                log.info(map.get(row.getString("jh")));
             }
         }
         return map;

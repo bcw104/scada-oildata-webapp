@@ -14,6 +14,8 @@ import java.util.Date;
 import java.util.Map;
 import javax.inject.Inject;
 import org.joda.time.LocalDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ import org.sql2o.Sql2o;
 @Transactional
 @Service("scslService")
 public class ScslServiceImpl implements ScslService {
+    private static final Logger log = LoggerFactory.getLogger(ScslServiceImpl.class);
 
     @Autowired
     private RealtimeDataService realtimeDataService;
@@ -44,7 +47,7 @@ public class ScslServiceImpl implements ScslService {
 
     @Override
     public void calcOilWellScsj(Calendar c) {
-        System.out.println("开始计算油井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("开始计算油井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
             Map<String, String> yxMap = realtimeDataService.getEndTagVarInfo(Scheduler.youCodeList, VarSubTypeEnum.YOU_JING_YUN_XING.toString().toLowerCase());
 //            String sql = "Insert into T_Oil_Well_Calc_Data"
@@ -74,17 +77,17 @@ public class ScslServiceImpl implements ScslService {
                 }
                 query.executeBatch();
                 con.commit();
-                System.out.println("计算完:" + minite);
+                log.info("计算完:" + minite);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("完成计算油井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("完成计算油井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
     @Override
     public void calcWaterWellScsj(Calendar c) {
-        System.out.println("开始计算水井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("开始计算水井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
         if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
 //            String sql = "Insert into T_Water_Well_Calc_Data"
 //                    + "(ID, CODE, MINITE, IS_ON, LRSJ) "
@@ -107,15 +110,15 @@ public class ScslServiceImpl implements ScslService {
                     if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
                         String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
                         for (String varName : framesLine) {
-                            if (varName.contains("yx|")) {
+                            if (varName.contains("yc|")) {
                                 String varNames[] = varName.trim().split("\\|");
                                 String varName1 = varNames[1];
                                 String codeName = varNames[2];
                                 String varNameStr = varNames[3];
-                                if (varName1.contains("fmqg")) { //阀门全关
-                                    String fmqgValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (fmqgValue != null) {
-                                        isOn = Boolean.valueOf(fmqgValue) ? 0 : 1;
+                                if (varName1.contains("shll")) { //瞬时流量
+                                    String ssllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (ssllValue != null) {
+                                        isOn = Float.valueOf(ssllValue)>0.1 ? 1 : 0;
                                     }
                                     break;
                                 }
@@ -131,11 +134,11 @@ public class ScslServiceImpl implements ScslService {
                 }
                 query.executeBatch();
                 con.commit();
-                System.out.println("计算完:" + minite);
+                log.info("计算完:" + minite);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("完成计算水井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("完成计算水井运行时间：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 }

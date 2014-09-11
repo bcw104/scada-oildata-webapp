@@ -5,10 +5,8 @@
 package com.ht.scada.oildata.service.impl;
 
 import com.ht.scada.common.tag.entity.EndTag;
-import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
 import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
-import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
@@ -18,7 +16,6 @@ import com.ht.scada.oildata.service.WetkSGTService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -60,7 +57,7 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
      */
     @Override
     public void wetkTask() {
-        System.out.println("开启功图计产任务——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("开启功图计产任务——现在时刻：" + CommonUtils.date2String(new Date()));
         // 功图id(32位随机数)
         String gtId;
         float CC, CC1, ZDZH, ZXZH;
@@ -118,7 +115,7 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
                 }
             }
         }
-        System.out.println("完成功图计产任务——现在时刻：" + CommonUtils.date2String(new Date()));
+        log.info("完成功图计产任务——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
     /**

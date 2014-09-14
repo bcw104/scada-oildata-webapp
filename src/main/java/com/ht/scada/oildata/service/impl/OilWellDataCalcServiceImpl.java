@@ -475,7 +475,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         con.createQuery(jzrSql) //
                                 .addParameter("JH", code) //井号
                                 .addParameter("RQ", c.getTime())//日期
-                                .addParameter("SCSJ", RLJYXSJ) //生产时间
+                                .addParameter("SCSJ", (RLJYXSJ/1440)*24) //生产时间
                                 .addParameter("CC", CHONG_CHENG) //冲程
                                 .addParameter("CC1", CHONG_CI) //冲次
                                 .addParameter("TY", TY) //套压

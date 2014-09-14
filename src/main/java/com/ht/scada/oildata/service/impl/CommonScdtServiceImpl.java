@@ -11,6 +11,7 @@ import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
+import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.service.CommonScdtService;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -126,13 +127,13 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     }
 
     /**
-     * 一个月内生产时间平均值为0
+     * 三个月内生产时间平均值为0
      * @return 
      */
     private Map<String, String> getChangTingClosedInfo() {
         Calendar endTime = Calendar.getInstance();
         Calendar startTime = Calendar.getInstance();
-        startTime.set(Calendar.MONTH, endTime.get(Calendar.MONTH) - 1);
+        startTime.set(Calendar.MONTH, endTime.get(Calendar.MONTH) - 3);
 
 //        System.out.println(LocalDateTime.fromCalendarFields(startTime));
 //        System.out.println(LocalDateTime.fromCalendarFields(endTime));
@@ -155,5 +156,20 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             }
         }
         return map;
+    }
+
+    @Override
+    public void test() {
+        
+        int i = 1;
+    	for(EndTag endTag : Scheduler.youJingList) {
+            String status = realtimeDataService.getEndTagVarInfo(endTag.getCode(), "rtu_rj45_status");
+            String ctj = realtimeDataService.getEndTagVarInfo(endTag.getCode(), RedisKeysEnum.CTJ.toString());
+            String gjyy = realtimeDataService.getEndTagVarInfo(endTag.getCode(), RedisKeysEnum.GJYY.toString());
+            if(status.equals("false") && ctj.trim().equals("") && gjyy.trim().equals("")) {
+                System.out.println(i+": "+endTag.getCode()+"通讯不通——"+ LocalDateTime.fromCalendarFields(Calendar.getInstance()).toString("yyyy-MM-dd HH:mm:ss") );
+                i++;
+            }
+    	}
     }
 }

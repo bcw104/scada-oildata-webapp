@@ -287,11 +287,12 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                         + "(JH, RQ, SCSJ, GXYL, YY, RZSL, GXSJ, PZL, GXR) "
                         + "values (:JH, :RQ, :SCSJ, :GXYL, :YY, :RZSL, :GXSJ, :PZL, :GXR)";
 
+                
                 try (Connection con = sql2o.open()) {
                     con.createQuery(jzrSql)
                             .addParameter("JH", code) //井号
                             .addParameter("RQ", c.getTime())//日期
-                            .addParameter("SCSJ", YXSJ) //生产时间
+                            .addParameter("SCSJ", (YXSJ/1440)*24) //生产时间
                             .addParameter("GXYL", GY) //干线压力
                             .addParameter("YY", ZRYL) //油压
                             .addParameter("RZSL", LJZSL) //日注水量

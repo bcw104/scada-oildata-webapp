@@ -61,9 +61,10 @@ public class Scheduler {
 //        wellInfoInsertService.wellInfoSaveTask(); //井基本数据录入任务
 //        waterWellDataCalcService.runBanBaoTask();
 //        waterWellDataCalcService.runRiBaoTask();
-        commonScdtService.wellClosedInfo();
+//        commonScdtService.wellClosedInfo();
 //        scslService.calcOilWellScsj();
 //        scslService.calcWaterWellScsj(Calendar.getInstance());
+//        commonScdtService.test();
 
     }
 

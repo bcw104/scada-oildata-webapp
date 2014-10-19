@@ -4,22 +4,33 @@
  */
 package com.ht.scada.oildata.service.impl;
 
+import com.google.common.base.Joiner;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
+import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
+import com.ht.scada.common.tag.util.VarGroupEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
+import com.ht.scada.data.kv.VarGroupData;
 import com.ht.scada.data.service.RealtimeDataService;
+import com.ht.scada.data.service.RealtimeDataService1;
+import com.ht.scada.data.service.impl.HistoryDataServiceImpl2;
 import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.service.CommonScdtService;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import javax.inject.Inject;
+import org.apache.commons.lang.ArrayUtils;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +54,10 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     private EndTagService endTagService;
     @Autowired
     private RealtimeDataService realtimeDataService;
+//    @Autowired
+//    private RealtimeDataService1 realtimeDataService1;
+    @Autowired
+    private HistoryDataServiceImpl2 historyDataServiceImpl2;
     @Inject
     protected Sql2o sql2o;
 
@@ -83,9 +98,9 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
                 //长停井
-                if(ctjMap.get(youJing.getCode()) != null) {
+                if (ctjMap.get(youJing.getCode()) != null) {
                     System.out.println("长停井：" + youJing.getCode());
-                    realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.CTJ.toString(), map.get(youJing.getCode())!=null?"长停井：" + map.get(youJing.getCode()):"长停井");
+                    realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.CTJ.toString(), map.get(youJing.getCode()) != null ? "长停井：" + map.get(youJing.getCode()) : "长停井");
                 } else {
                     realtimeDataService.putValue(youJing.getCode(), RedisKeysEnum.CTJ.toString(), "");
                 }
@@ -128,7 +143,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 
     /**
      * 三个月内生产时间平均值为0
-     * @return 
+     *
+     * @return
      */
     private Map<String, String> getChangTingClosedInfo() {
         Calendar endTime = Calendar.getInstance();
@@ -160,16 +176,60 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 
     @Override
     public void test() {
-        
+        txzd();//通讯中断
+//        gtDataToRTDB();
+    }
+
+    private void txzd() {
         int i = 1;
-    	for(EndTag endTag : Scheduler.youJingList) {
+        for (EndTag endTag : Scheduler.youJingList) {
             String status = realtimeDataService.getEndTagVarInfo(endTag.getCode(), "rtu_rj45_status");
             String ctj = realtimeDataService.getEndTagVarInfo(endTag.getCode(), RedisKeysEnum.CTJ.toString());
             String gjyy = realtimeDataService.getEndTagVarInfo(endTag.getCode(), RedisKeysEnum.GJYY.toString());
-            if(status.equals("false") && ctj.trim().equals("") && gjyy.trim().equals("")) {
-                System.out.println(i+": "+endTag.getCode()+"通讯不通——"+ LocalDateTime.fromCalendarFields(Calendar.getInstance()).toString("yyyy-MM-dd HH:mm:ss") );
+            if (status.equals("false") && ctj.trim().equals("") && gjyy.trim().equals("")) {
+                System.out.println(i + ": " + endTag.getCode() + "通讯不通——" + LocalDateTime.fromCalendarFields(Calendar.getInstance()).toString("yyyy-MM-dd HH:mm:ss"));
                 i++;
             }
-    	}
+        }
+    }
+
+    private void gtDataToRTDB() {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date start = null;
+        Date end = null;
+        try {
+            start = df.parse("2014-10-05 0:0:0");
+            end = df.parse("2014-10-12 0:0:0");
+        } catch (ParseException ex) {
+            java.util.logging.Logger.getLogger(CommonScdtServiceImpl.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
+            int i=1;
+            for (EndTag youJing : Scheduler.youJingList) {
+                try {
+                    if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
+                        continue;
+                    }
+
+                    List<VarGroupData> list = historyDataServiceImpl2.getVarGroupData(youJing.getCode(), VarGroupEnum.YOU_JING_SGT, start, end, 5000);
+                    for (VarGroupData data : list) {
+                        Map<String, String> map = new HashMap<>();
+                        for (String key : data.getYcValueMap().keySet()) {
+                            map.put(key, String.valueOf(data.getYcValueMap().get(key)));
+                        }
+                        for (String key : data.getArrayValueMap().keySet()) {
+                            map.put(key, Joiner.on(',').join(ArrayUtils.toObject(data.getArrayValueMap().get(key))));
+                        }
+//                        realtimeDataService1.putListValue(youJing.getCode() + "_SGT_TIME", String.valueOf(data.getDatetime().getTime()));
+//                        realtimeDataService1.updateEndModel(youJing.getCode() + "_" + String.valueOf(data.getDatetime().getTime()) + "_SGT", map);
+                    }
+                    System.out.println(i+":"+youJing.getCode() + " 功图数据写入完毕！");
+                } catch (Exception e) {
+                    log.error(e.toString());
+                }
+                i++;
+            }
+        }
     }
 }

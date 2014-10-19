@@ -5,9 +5,8 @@
 package com.ht.scada.oildata.service.impl;
 
 import com.ht.scada.common.tag.entity.EndTag;
-import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
-import com.ht.scada.common.tag.util.EndTagTypeEnum;
+import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.entity.SoeRecord;
@@ -161,6 +160,32 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         e.printStackTrace();
                     }
                     //***************************结束  计算耗电量*******************
+                    
+                    
+                    //***********************开始   计算螺杆泵液量*****************
+                    String lljsyNum = null;
+                    if(youJing.getSubType().equals(EndTagSubTypeEnum.LUO_GAN_BENG.toString())) {
+                        //流量积算仪读数
+                        lljsyNum = realtimeDataService.getEndTagVarInfo(code, "lljsy1_ljll");
+                        //上一班累积流量
+                        String ljLljsy = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
+                        Float banLljsy = ljLljsy == null ? 0f : Float.valueOf(ljLljsy);
+                        if(lljsyNum != null) {
+                            //零时8点积算仪累积流量
+                            String zeroJsyNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_LLJSYLL.toString());
+                            LJCYL = Float.valueOf(lljsyNum) - Float.valueOf(zeroJsyNum == null?"0":zeroJsyNum);
+                            CYL = LJCYL - banLljsy;
+                            LJYL = LJCYL * (1-(HS==null?0:HS));
+                            YL = CYL * (1-(HS==null?0:HS));
+                            //更新流量自控仪累积产液量
+                            realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJCYL.toString(), String.valueOf(LJCYL));
+                            realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYL.toString(), String.valueOf(LJYL));
+                        }                   
+                    }
+                    
+                    
+                    //***********************结束   计算螺杆泵液量*****************
+                    
 
                     //***************************开始  计算运行时间****************
                     Float YXSJ = getYxsj(code);
@@ -256,6 +281,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     //最后一班写入电表读数
                     if (SJD.equals("8:00")) {
                         realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString(), currentNum == null ? "0" : currentNum);
+                        //螺杆泵流量积算仪数据
+                        if(youJing.getSubType().equals(EndTagSubTypeEnum.LUO_GAN_BENG.toString())) {
+                            realtimeDataService.putValue(code, "lljsy1_ljll",  lljsyNum == null ? "0" : lljsyNum);
+                        }
+                        
                     }
 
                     try (Connection con = sql2o.open()) {
@@ -410,6 +440,9 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     CYL = rtCYL == null ? null : Float.valueOf(rtCYL);
                     YL = rtYL == null ? null : Float.valueOf(rtYL);
                     HDL = rtHDL == null ? 0f : Float.valueOf(rtHDL);
+                    
+                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), rtCYL==null?"0":rtCYL); //昨日产液量
+                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), rtYL==null?"0":rtYL);    //昨日产油量
 
                     Calendar c = Calendar.getInstance();
                     c.set(Calendar.MINUTE, 0);
@@ -456,8 +489,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .addParameter("XXDL", XXDL)//下行电流
                                 .addParameter("SXNH", SXNH)//上行能耗
                                 .addParameter("XXNH", XXNH)//下行能耗
-                                .addParameter("SXGL", SXGL)//上行能耗
-                                .addParameter("XXGL", XXGL)//下行能耗
+                                .addParameter("SXGL", SXGL)//上行功率
+                                .addParameter("XXGL", XXGL)//下行功率
                                 .addParameter("PL", PL)//频率
                                 .executeUpdate();
                     } catch (Exception e) {
@@ -498,16 +531,16 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
 
                     //昨日产液量、昨日产油量、昨日耗电量
-                    Calendar cal = Calendar.getInstance();
-                    cal.set(Calendar.MINUTE, 0);
-                    cal.set(Calendar.SECOND, 0);
-                    cal.set(Calendar.MILLISECOND, 0);
-                    Date eDate = cal.getTime();
-                    Date sDate = new Date(cal.getTime().getTime() - 24 * 60 * 60000);
-                    float[] cyl = getCylAndYlByJHAndTime(code, sDate, eDate);
-                    log.info("{} 昨日产液量：{}  昨日产油量：{}", code, cyl[0], cyl[1]);
-                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(cyl[0])); //昨日产液量
-                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(cyl[1])); //昨日产油量
+//                    Calendar cal = Calendar.getInstance();
+//                    cal.set(Calendar.MINUTE, 0);
+//                    cal.set(Calendar.SECOND, 0);
+//                    cal.set(Calendar.MILLISECOND, 0);
+//                    Date eDate = cal.getTime();
+//                    Date sDate = new Date(cal.getTime().getTime() - 24 * 60 * 60000);
+//                    float[] cyl = getCylAndYlByJHAndTime(code, sDate, eDate);
+//                    log.info("{} 昨日产液量：{}  昨日产油量：{}", code, cyl[0], cyl[1]);
+//                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(cyl[0])); //昨日产液量
+//                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(cyl[1])); //昨日产油量
                     realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), String.valueOf(HDL));  //昨日耗电量
 
                     //清除班累积运算值

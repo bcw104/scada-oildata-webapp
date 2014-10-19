@@ -160,15 +160,16 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             float wetkYl = gtsc.getRCYL();
                             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), String.valueOf(wetkCyl));
                             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), String.valueOf(wetkYl));
-
-                            String bgt_weiyi = String2FloatArrayUtil.string2OrientationStringArrayUtil(gtsc.getBGT(), String2FloatArrayUtil.ORIENTATION_X, ";");
-                            String bgt_zaihe = String2FloatArrayUtil.string2OrientationStringArrayUtil(gtsc.getBGT(), String2FloatArrayUtil.ORIENTATION_Y, ";");
-                            if (bgt_weiyi != null) {
-                                realtimeDataService.putValue(code, RedisKeysEnum.WETK_WY.toString(), bgt_weiyi); //位移 
-                            }
-                            if (bgt_zaihe != null) {
-                                realtimeDataService.putValue(code, RedisKeysEnum.WETK_BGT.toString(), bgt_zaihe); //泵功图
-                            }
+                            
+                            //泵功图
+//                            String bgt_weiyi = String2FloatArrayUtil.string2OrientationStringArrayUtil(gtsc.getBGT(), String2FloatArrayUtil.ORIENTATION_X, ";");
+//                            String bgt_zaihe = String2FloatArrayUtil.string2OrientationStringArrayUtil(gtsc.getBGT(), String2FloatArrayUtil.ORIENTATION_Y, ";");
+//                            if (bgt_weiyi != null) {
+//                                realtimeDataService.putValue(code, RedisKeysEnum.WETK_WY.toString(), bgt_weiyi); //位移 
+//                            }
+//                            if (bgt_zaihe != null) {
+//                                realtimeDataService.putValue(code, RedisKeysEnum.WETK_BGT.toString(), bgt_zaihe); //泵功图
+//                            }
                         }
                         //***************END 威尔泰克功图 ******************
 
@@ -193,9 +194,9 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                 "  q.RCYL1 rcyl1, " +//
                 "  q.RCYL  rcyl, " +//
                 "  s.JH    jh, " +//
-                "  q.CJSJ  cjsj, " +//
-                "  s.WY    wy, " +//
-                "  q.BGT   bgt " +//
+                "  q.CJSJ  cjsj " +//
+//                "  s.WY    wy, " +//
+//                "  q.BGT   bgt " +//
                 " FROM QYSCZH.SCY_SGT_GTCJ s LEFT JOIN QYSCZH.SCY_SGT_GTFX q ON q.JH = s.JH AND s.cjsj = q.cjsj AND s.id = q.gtid "
                 + " WHERE q.SCJSBZ=1 and s.JH = :CODE and q.cjsj is not null ORDER BY q.CJSJ DESC ";
         try (Connection con = sql2o.open()) {  //

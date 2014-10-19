@@ -15,7 +15,7 @@ public class JettyServer {
     public static void main(String[] args) throws Exception {
 //        log.info("启动Web");
 
-        Server server = new Server(8089);
+        Server server = new Server(8088);
 
         WebAppContext context = new WebAppContext("webapp", "/");
         //context.setDescriptor("webapp/WEB-INF/web.xml");

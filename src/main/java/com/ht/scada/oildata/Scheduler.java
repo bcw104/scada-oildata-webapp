@@ -87,7 +87,7 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-//    @Scheduled(cron = "0 0/10 * * * ? ")
+    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
         oilProductCalcService.oilProductCalcTask();   //功图分析计算
@@ -96,7 +96,7 @@ public class Scheduler {
     /**
      * 9、11、13、15、17、19、21、23、1、3、5、7
      */
-    @Scheduled(cron = "0 45 1/2 * * ? ")
+//    @Scheduled(cron = "0 45 1/2 * * ? ")
     private void oilBanBaoTask() {
         oilWellDataCalcService.runBanBaoTask();
     }
@@ -104,22 +104,22 @@ public class Scheduler {
     /**
      * 每天7点半将报表数据写入数据库
      */
-    @Scheduled(cron = "0 55 7 * * ? ")
+//    @Scheduled(cron = "0 55 7 * * ? ")
     private void oilRiBaoTask() {
         oilWellDataCalcService.runRiBaoTask();
     }
 
-    @Scheduled(cron = "0 0 12 * * ? ")
+//    @Scheduled(cron = "0 0 12 * * ? ")
     private void wellClosedInfo() {
         commonScdtService.wellClosedInfo();
     }
 
-    @Scheduled(cron = "0 50 1/2 * * ? ")
+//    @Scheduled(cron = "0 50 1/2 * * ? ")
     private void waterBanBaoTask() {
         waterWellDataCalcService.runBanBaoTask();
     }
 
-    @Scheduled(cron = "0 58 7 * * ? ")
+//    @Scheduled(cron = "0 58 7 * * ? ")
     private void waterRiBaoTask() {
         waterWellDataCalcService.runRiBaoTask();
     }

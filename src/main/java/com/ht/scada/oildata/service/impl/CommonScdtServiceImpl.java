@@ -54,8 +54,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     private EndTagService endTagService;
     @Autowired
     private RealtimeDataService realtimeDataService;
-//    @Autowired
-//    private RealtimeDataService1 realtimeDataService1;
+    @Autowired
+    private RealtimeDataService1 realtimeDataService1;
     @Autowired
     private HistoryDataServiceImpl2 historyDataServiceImpl2;
     @Inject
@@ -176,8 +176,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 
     @Override
     public void test() {
-        txzd();//通讯中断
-//        gtDataToRTDB();
+//        txzd();//通讯中断
+        gtDataToRTDB();
     }
 
     private void txzd() {
@@ -199,7 +199,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         Date end = null;
         try {
             start = df.parse("2014-10-05 0:0:0");
-            end = df.parse("2014-10-12 0:0:0");
+            end = df.parse("2014-10-30 0:0:0");
         } catch (ParseException ex) {
             java.util.logging.Logger.getLogger(CommonScdtServiceImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -221,8 +221,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                         for (String key : data.getArrayValueMap().keySet()) {
                             map.put(key, Joiner.on(',').join(ArrayUtils.toObject(data.getArrayValueMap().get(key))));
                         }
-//                        realtimeDataService1.putListValue(youJing.getCode() + "_SGT_TIME", String.valueOf(data.getDatetime().getTime()));
-//                        realtimeDataService1.updateEndModel(youJing.getCode() + "_" + String.valueOf(data.getDatetime().getTime()) + "_SGT", map);
+                        realtimeDataService1.putListValue(youJing.getCode() + "_SGT_TIME", String.valueOf(data.getDatetime().getTime()));
+                        realtimeDataService1.updateEndModel(youJing.getCode() + "_" + String.valueOf(data.getDatetime().getTime()) + "_SGT", map);
                     }
                     System.out.println(i+":"+youJing.getCode() + " 功图数据写入完毕！");
                 } catch (Exception e) {

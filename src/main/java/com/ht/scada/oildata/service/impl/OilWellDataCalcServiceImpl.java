@@ -175,8 +175,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                             String zeroJsyNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_LLJSYLL.toString());
                             LJCYL = Float.valueOf(lljsyNum) - Float.valueOf(zeroJsyNum == null?"0":zeroJsyNum);
                             CYL = LJCYL - banLljsy;
-                            LJYL = LJCYL * (1-(HS==null?0:HS));
-                            YL = CYL * (1-(HS==null?0:HS));
+                            LJYL = LJCYL * (1-(HS==null?0:HS/100f));
+                            YL = CYL * (1-(HS==null?0:HS/100f));
                             //更新流量自控仪累积产液量
                             realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJCYL.toString(), String.valueOf(LJCYL));
                             realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYL.toString(), String.valueOf(LJYL));
@@ -283,7 +283,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString(), currentNum == null ? "0" : currentNum);
                         //螺杆泵流量积算仪数据
                         if(youJing.getSubType().equals(EndTagSubTypeEnum.LUO_GAN_BENG.toString())) {
-                            realtimeDataService.putValue(code, "lljsy1_ljll",  lljsyNum == null ? "0" : lljsyNum);
+                            realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_LLJSYLL.toString(), lljsyNum == null ? "0" : lljsyNum);
                         }
                         
                     }

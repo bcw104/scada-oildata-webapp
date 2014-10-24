@@ -64,7 +64,7 @@ public class Scheduler {
 //        commonScdtService.wellClosedInfo();
 //        scslService.calcOilWellScsj();
 //        scslService.calcWaterWellScsj(Calendar.getInstance());
-//        commonScdtService.test();
+        commonScdtService.test();
 
     }
 
@@ -87,7 +87,7 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-    @Scheduled(cron = "0 0/10 * * * ? ")
+//    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
         oilProductCalcService.oilProductCalcTask();   //功图分析计算

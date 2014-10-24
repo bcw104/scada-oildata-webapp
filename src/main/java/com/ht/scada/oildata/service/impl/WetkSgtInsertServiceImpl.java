@@ -12,8 +12,10 @@ import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.entity.WetkSGT;
+import com.ht.scada.oildata.service.WellInfoService;
 import com.ht.scada.oildata.service.WetkSGTService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +40,8 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
     private RealtimeDataService realtimeDataService;
     @Autowired
     private WetkSGTService wetkSGTService;
+    @Autowired
+    private WellInfoService wellInfoService;
     private Map<String, String> dateMap = new HashMap<>();
     @Inject
     protected Sql2o sql2o;
@@ -108,7 +112,15 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
                         wetkSGT.setWGGL(getRealtimeData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
 
                         wetkSGTService.addOneRecord(wetkSGT); // 持久化
-                        wetkSGTService.addOneGTFXRecord(gtId, code, CommonUtils.string2Date(newDateTime), CC, CC1, ZDZH, ZXZH); // 功图分析表持久化数据
+
+                        Map<String, Object> basicInforOfthisEndtag = wellInfoService.findBasicCalculateInforsByCode(code);
+                        Float bengJing = null, hanShui = null, yymd = null;
+                        if (basicInforOfthisEndtag != null) {		// 不为空
+                            bengJing = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("bj")).toString());
+                            hanShui = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("hs")).toString());
+                            yymd = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("dmyymd")).toString());
+                        }
+                        wetkSGTService.addOneGTFXRecord(gtId, code, CommonUtils.string2Date(newDateTime), CC, CC1, ZDZH, ZXZH, bengJing, hanShui, yymd, 1F); // 功图分析表持久化数据
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

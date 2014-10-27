@@ -127,7 +127,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             String phddl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU_DL));
                             String sxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_SHANG));
                             String xxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_XIA));
-
+                            
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_CYL.toString(), shCYL);
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_CYL.toString(), ljCYL);
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_YUGU_CYL.toString(), ygCYL);
@@ -149,6 +149,13 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             realtimeDataService.putValue(code, RedisKeysEnum.DL_SHANG.toString(), sxdl);
                             realtimeDataService.putValue(code, RedisKeysEnum.DL_XIA.toString(), xxdl);
                             realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV_DL.toString(), phddl);
+                            
+                            //泵效
+                            Object bx = resultMap.get(GTReturnKeyEnum.BENG_XIAO);
+                            if(bx != null) {
+                                realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), String.valueOf((Float)bx));
+                            }
+                            
                         } catch (Exception e) {
                             log.info(code + "功图分析出现异常：" + e.toString());
                         }

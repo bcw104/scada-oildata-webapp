@@ -12,7 +12,7 @@
     <groupId>com.ht.scada</groupId>
     <artifactId>scada-oildata-webapp</artifactId>
     <packaging>war</packaging>
-    <name>功图Web应用程序</name>
+    <name>定时任务Web应用程序</name>
 
     <dependencies>
         <dependency>

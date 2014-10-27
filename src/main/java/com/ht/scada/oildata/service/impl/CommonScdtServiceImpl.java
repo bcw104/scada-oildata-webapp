@@ -13,6 +13,7 @@ import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarGroupEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
+import com.ht.scada.data.Config;
 import com.ht.scada.data.kv.VarGroupData;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.data.service.RealtimeDataService1;
@@ -198,8 +199,10 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         Date start = null;
         Date end = null;
         try {
-            start = df.parse("2014-10-05 0:0:0");
-            end = df.parse("2014-10-30 0:0:0");
+//            start = df.parse("2014-10-15 0:0:0");
+//            end = df.parse("2014-10-30 0:0:0");
+            start = df.parse(Config.INSTANCE.getConfig().getString("start", "2014-10-15 0:0:0"));
+            end = df.parse(Config.INSTANCE.getConfig().getString("end", "2014-10-30 0:0:0"));
         } catch (ParseException ex) {
             java.util.logging.Logger.getLogger(CommonScdtServiceImpl.class.getName()).log(Level.SEVERE, null, ex);
         }

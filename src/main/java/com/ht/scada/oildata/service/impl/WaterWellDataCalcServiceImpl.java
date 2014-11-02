@@ -105,18 +105,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                                     if (ssllValue != null) {
                                         SSLL = CommonUtils.formatFloat(Float.parseFloat(ssllValue), 2);
                                     }
-                                } else if (varName1.contains("fmqg")) { //阀门全关
-                                    String fmqgValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (fmqgValue != null) {
-//                                    yxsj = Float.parseFloat(yxsjValue);
-                                    }
                                 }
-//                            else if (varName1.contains("zsllsdz")) { //流量设定值
-//                                String llsdValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-//                                if (llsdValue != null) {
-//                                    LLSD = Float.parseFloat(llsdValue);
-//                                }
-//                            }
                             }
                         }
                     }
@@ -125,8 +114,38 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                     log.info(code + ":" + e.toString());
                 }
 
-                if (shuiJing.getParent() != null) {  //干压
-                    GY = getRealData(shuiJing.getParent().getCode(), "gxyl");
+//                if (shuiJing.getParent() != null) {  //干压
+//                    GY = getRealData(shuiJing.getParent().getCode(), "gxyl");
+//                }
+                //获取干线压力
+                String extConfigInfo = null;
+                if (shuiJing.getParent() != null) {
+                    extConfigInfo = shuiJing.getParent().getExtConfigInfo();// 获取配水间值 
+                } else {//单井水井
+                    extConfigInfo = shuiJing.getExtConfigInfo();// 获取配水间值 
+                }
+                try {
+                    if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
+                        String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
+                        for (String varName : framesLine) {
+                            //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
+                            if (varName.contains("yc|")) {
+                                String varNames[] = varName.trim().split("\\|");
+                                String varName1 = varNames[1];
+                                String codeName = varNames[2];
+                                String varNameStr = varNames[3];
+                                if (varName1.contains("gxyl-")) { // 干线压力
+                                    String gxylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (gxylValue != null) {
+                                        GY = CommonUtils.formatFloat(Float.parseFloat(gxylValue), 2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                } catch (Exception e) {
+                    log.info(code + ":" + e.toString());
                 }
 
                 //计算
@@ -178,11 +197,11 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
 
                 try (Connection con = sql2o.open()) {
                     con.createQuery(sql) //
-                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
-                            .addParameter("CODE", code) //
+                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //ID
+                            .addParameter("CODE", code) //井号
                             .addParameter("PSJ", PSJ) //配水间
-                            .addParameter("SAVE_TIME", new Date())//
-                            .addParameter("DATE_TIME", c.getTime())//
+                            .addParameter("SAVE_TIME", new Date())//转储时间
+                            .addParameter("DATE_TIME", c.getTime())//数据时间
                             .addParameter("YXSJ", YXSJ)//运行时间
                             .addParameter("LJYXSJ", LJYXSJ)//累积运行时间
                             .addParameter("GY", GY)//干压
@@ -194,7 +213,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .addParameter("LJZSL", LJZSL)//日累积注水量
                             .addParameter("CQL", CQL)//超欠量
                             .addParameter("SJD", SJD)//时间段
-                            .executeUpdate();//
+                            .executeUpdate();
                 } catch (Exception e) {
                     log.info("处理水井：" + code + "出现异常！" + e.toString());
                 }
@@ -263,6 +282,14 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 c.set(Calendar.MILLISECOND, 0);
                 c.set(Calendar.HOUR_OF_DAY, 0);
 
+                float scsj = 0;
+                try {
+                    int hour = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
+                    float minite = YXSJ % 60;
+                    scsj = hour + minite / 100;
+                } catch (Exception e) {
+                }
+
                 try (Connection con = sql2o.open()) {
                     con.createQuery(sql) //
                             .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
@@ -270,7 +297,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .addParameter("PSJ", PSJ) //配水间
                             .addParameter("SAVE_TIME", new Date())//
                             .addParameter("DATE_TIME", c.getTime())//
-                            .addParameter("YXSJ", YXSJ)//运行时间
+                            .addParameter("YXSJ", scsj)//运行时间
                             .addParameter("GY", GY)//干压
                             .addParameter("ZRYL", ZRYL)//注入压力
                             .addParameter("YY", ZRYL)//油压
@@ -287,12 +314,12 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                         + "(JH, RQ, SCSJ, GXYL, YY, RZSL, GXSJ, PZL, GXR) "
                         + "values (:JH, :RQ, :SCSJ, :GXYL, :YY, :RZSL, :GXSJ, :PZL, :GXR)";
 
-                
+
                 try (Connection con = sql2o.open()) {
                     con.createQuery(jzrSql)
                             .addParameter("JH", code) //井号
                             .addParameter("RQ", c.getTime())//日期
-                            .addParameter("SCSJ", (YXSJ/1440)*24) //生产时间
+                            .addParameter("SCSJ", scsj) //生产时间
                             .addParameter("GXYL", GY) //干线压力
                             .addParameter("YY", ZRYL) //油压
                             .addParameter("RZSL", LJZSL) //日注水量
@@ -310,6 +337,135 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), "0");
             }
             log.info("水井日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
+        }
+    }
+
+    @Override
+    public void runPsfzTask(Calendar c) {
+        log.info("配水阀组录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
+        if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
+            for (EndTag shuiJing : Scheduler.shuiJingList) {
+                String code = shuiJing.getCode();
+
+                //计算
+                Float YL = null, WD = null, SSLL = null, LJLL = null, PZL = null, GXYL = null;
+                //实时库数据
+                Integer FMZT = null, KD = null, SFBL = 0;
+
+
+                //源头库数据
+                Map<String, Object> map = findDataFromYdkByCode(code);
+                if (map != null) {
+                    PZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString()) / 24;
+                }
+
+                //实时库数据
+                try {
+                    String extConfigInfo = shuiJing.getExtConfigInfo();		// 获得扩展信息 
+                    if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
+                        String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
+                        for (String varName : framesLine) {
+                            //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
+                            if (varName.contains("yx|") || varName.contains("yc|")) {
+                                String varNames[] = varName.trim().split("\\|");
+                                String varName1 = varNames[1];
+                                String codeName = varNames[2];
+                                String varNameStr = varNames[3];
+                                if (varName1.contains("zsyl-")) { // 注水压力
+                                    String zsylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (zsylValue != null) {
+                                        YL = CommonUtils.formatFloat(Float.parseFloat(zsylValue), 2);
+                                    }
+                                } else if (varName1.contains("ljll")) { // 累计流量
+                                    String ljllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (ljllValue != null) {
+                                        LJLL = CommonUtils.formatFloat(Float.parseFloat(ljllValue), 2);
+                                    }
+                                } else if (varName1.contains("shll")) { // 瞬时流量
+                                    String ssllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (ssllValue != null) {
+                                        SSLL = CommonUtils.formatFloat(Float.parseFloat(ssllValue), 2);
+                                    }
+                                } else if (varName1.contains("fmqg")) { //阀门状态
+                                    String fmqgValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (fmqgValue != null) {
+                                        if ("true".equals(fmqgValue)) {
+                                            FMZT = 1;
+                                        } else {
+                                            FMZT = 0;
+                                        }
+                                    }
+                                } else if (varName1.contains("fmkd")) { //阀门开度
+                                    String fmkdValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (fmkdValue != null) {
+                                        KD = (int) (Float.parseFloat(fmkdValue));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                } catch (Exception e) {
+                    log.info(code + ":" + e.toString());
+                }
+
+                //获取干线压力
+                String extConfigInfo = null;
+                if (shuiJing.getParent() != null) {
+                    extConfigInfo = shuiJing.getParent().getExtConfigInfo();// 获取配水间值 
+                } else {//单井水井
+                    extConfigInfo = shuiJing.getExtConfigInfo();// 获取配水间值 
+                }
+                try {
+                    if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
+                        String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
+                        for (String varName : framesLine) {
+                            //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
+                            if (varName.contains("yc|")) {
+                                String varNames[] = varName.trim().split("\\|");
+                                String varName1 = varNames[1];
+                                String codeName = varNames[2];
+                                String varNameStr = varNames[3];
+                                if (varName1.contains("gxyl-")) { // 干线压力
+                                    String gxylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (gxylValue != null) {
+                                        GXYL = CommonUtils.formatFloat(Float.parseFloat(gxylValue), 2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                } catch (Exception e) {
+                    log.info(code + ":" + e.toString());
+                }
+
+
+                String jzrSql = "Insert into QYSCZH.SJS_SS_PSFZ "
+                        + "(SBMC, YL, WD, SSLL, LJLL, FMZT, KD, PZL, GXYL, CJSJ, ZCSJ, SFBL) "
+                        + "values (:SBMC, :YL, :WD, :SSLL, :LJLL, :FMZT, :KD, :PZL, :GXYL, :CJSJ, :ZCSJ, :SFBL)";
+
+                try (Connection con = sql2o.open()) {
+                    con.createQuery(jzrSql)
+                            .addParameter("SBMC", code) //井号
+                            .addParameter("YL", YL)//压力
+                            .addParameter("WD", WD) //温度
+                            .addParameter("SSLL", SSLL) //瞬时流量
+                            .addParameter("LJLL", LJLL) //累积流量
+                            .addParameter("FMZT", FMZT) //阀门状态
+                            .addParameter("KD", KD)//开度
+                            .addParameter("PZL", PZL)//配注量（小时）
+                            .addParameter("GXYL", GXYL)//干线压力
+                            .addParameter("CJSJ", c.getTime())//采集时间
+                            .addParameter("ZCSJ", new Date())//转储时间
+                            .addParameter("SFBL", SFBL)//是否补录
+                            .executeUpdate();
+                } catch (Exception e) {
+                    log.info(code + "发生异常！");
+                    e.printStackTrace();
+                }
+            }
+            log.info("配水阀组录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
         }
     }
 

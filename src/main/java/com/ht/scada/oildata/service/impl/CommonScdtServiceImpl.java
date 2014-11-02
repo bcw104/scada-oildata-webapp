@@ -55,8 +55,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     private EndTagService endTagService;
     @Autowired
     private RealtimeDataService realtimeDataService;
-    @Autowired
-    private RealtimeDataService1 realtimeDataService1;
+//    @Autowired
+//    private RealtimeDataService1 realtimeDataService1;
     @Autowired
     private HistoryDataServiceImpl2 historyDataServiceImpl2;
     @Inject
@@ -178,7 +178,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     @Override
     public void test() {
 //        txzd();//通讯中断
-        gtDataToRTDB();
+//        gtDataToRTDB();
+        yjlx();
     }
 
     private void txzd() {
@@ -191,6 +192,14 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                 System.out.println(i + ": " + endTag.getCode() + "通讯不通——" + LocalDateTime.fromCalendarFields(Calendar.getInstance()).toString("yyyy-MM-dd HH:mm:ss"));
                 i++;
             }
+        }
+    }
+
+    private void yjlx() {
+        int i = 1;
+        for (EndTag endTag : Scheduler.youJingList) {
+            System.out.println(i + ": " + endTag.getCode() + ":" + endTag.getSubType());
+            i++;
         }
     }
 
@@ -208,7 +217,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         }
 
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
-            int i=1;
+            int i = 1;
             for (EndTag youJing : Scheduler.youJingList) {
                 try {
                     if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
@@ -224,10 +233,10 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                         for (String key : data.getArrayValueMap().keySet()) {
                             map.put(key, Joiner.on(',').join(ArrayUtils.toObject(data.getArrayValueMap().get(key))));
                         }
-                        realtimeDataService1.putListValue(youJing.getCode() + "_SGT_TIME", String.valueOf(data.getDatetime().getTime()));
-                        realtimeDataService1.updateEndModel(youJing.getCode() + "_" + String.valueOf(data.getDatetime().getTime()) + "_SGT", map);
+//                        realtimeDataService1.putListValue(youJing.getCode() + "_SGT_TIME", String.valueOf(data.getDatetime().getTime()));
+//                        realtimeDataService1.updateEndModel(youJing.getCode() + "_" + String.valueOf(data.getDatetime().getTime()) + "_SGT", map);
                     }
-                    System.out.println(i+":"+youJing.getCode() + " 功图数据写入完毕！");
+                    System.out.println(i + ":" + youJing.getCode() + " 功图数据写入完毕！");
                 } catch (Exception e) {
                     log.error(e.toString());
                 }

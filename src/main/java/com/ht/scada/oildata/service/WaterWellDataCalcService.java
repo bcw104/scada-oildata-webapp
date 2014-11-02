@@ -1,5 +1,7 @@
 package com.ht.scada.oildata.service;
 
+import java.util.Calendar;
+
 
 public interface WaterWellDataCalcService {
     /**
@@ -10,6 +12,8 @@ public interface WaterWellDataCalcService {
      * 日报任务
      */
     void runRiBaoTask();
+    
+    void runPsfzTask(Calendar c);
     
     void testMathod();
 }

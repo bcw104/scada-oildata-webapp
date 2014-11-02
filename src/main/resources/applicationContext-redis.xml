@@ -36,9 +36,9 @@
 
     <bean id="alarmListener" class="com.ht.scada.data.RealtimeDataMessageDelegate"/>
     
-    <bean id="connectionFactory1"
+<!--    <bean id="connectionFactory1"
           class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
           p:hostName="10.67.179.97" p:port="6379" p:password="" />
     <bean id="redisTemplate1" class="org.springframework.data.redis.core.StringRedisTemplate"
-              p:connectionFactory-ref="connectionFactory1" />
+              p:connectionFactory-ref="connectionFactory1" />-->
 </beans>

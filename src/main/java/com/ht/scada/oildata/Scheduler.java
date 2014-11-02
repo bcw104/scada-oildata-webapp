@@ -61,10 +61,11 @@ public class Scheduler {
 //        wellInfoInsertService.wellInfoSaveTask(); //井基本数据录入任务
 //        waterWellDataCalcService.runBanBaoTask();
 //        waterWellDataCalcService.runRiBaoTask();
+//        waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
 //        commonScdtService.wellClosedInfo();
 //        scslService.calcOilWellScsj();
 //        scslService.calcWaterWellScsj(Calendar.getInstance());
-        commonScdtService.test();
+//        commonScdtService.test();
 
     }
 
@@ -104,7 +105,7 @@ public class Scheduler {
     /**
      * 每天7点半将报表数据写入数据库
      */
-//    @Scheduled(cron = "0 55 7 * * ? ")
+//    @Scheduled(cron = "0 0 8 * * ? ")
     private void oilRiBaoTask() {
         oilWellDataCalcService.runRiBaoTask();
     }
@@ -119,7 +120,7 @@ public class Scheduler {
         waterWellDataCalcService.runBanBaoTask();
     }
 
-//    @Scheduled(cron = "0 58 7 * * ? ")
+//    @Scheduled(cron = "0 2 8 * * ? ")
     private void waterRiBaoTask() {
         waterWellDataCalcService.runRiBaoTask();
     }
@@ -133,5 +134,13 @@ public class Scheduler {
         scslService.calcOilWellScsj(c);
         scslService.calcWaterWellScsj(c);
 
+    }
+    
+     /**
+     * 每隔五分钟任务
+     */
+    @Scheduled(cron = "0 0/5 * * * ? ")
+    private void minite5Task() {
+        waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
     }
 }

@@ -400,38 +400,76 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     endTime.set(Calendar.SECOND, 0);
                     endTime.set(Calendar.MILLISECOND, 0);
                     endTime.set(Calendar.HOUR_OF_DAY, endTime.get(Calendar.HOUR_OF_DAY) + 1);
-                    Map<String, Object> dayMap = getAvgDailyData(code, startTime.getTime(), endTime.getTime());
-                    if (dayMap != null) {
-                        CHONG_CHENG = dayMap.get("chong_cheng") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_cheng")).toString());
-                        CHONG_CI = dayMap.get("chong_ci") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_ci")).toString());
-                        ZDZH = dayMap.get("zdzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zdzh")).toString());
-                        ZXZH = dayMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zxzh")).toString());
+//                    Map<String, Object> dayMap = getAvgDailyData(code, startTime.getTime(), endTime.getTime());
+//                    if (dayMap != null) {
+//                        CHONG_CHENG = dayMap.get("chong_cheng") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_cheng")).toString());
+//                        CHONG_CI = dayMap.get("chong_ci") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("chong_ci")).toString());
+//                        ZDZH = dayMap.get("zdzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zdzh")).toString());
+//                        ZXZH = dayMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zxzh")).toString());
+//                        
+//                        HY = dayMap.get("hy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("hy")).toString());
+//                        TY = dayMap.get("ty") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("ty")).toString());
+//                        WD = dayMap.get("wd") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("wd")).toString());
+//                        PJDL = dayMap.get("pjdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdl")).toString());
+//                        PJDY = dayMap.get("pjdy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdy")).toString());
+//                        SXDL = dayMap.get("sxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxdl")).toString());
+//                        XXDL = dayMap.get("xxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxdl")).toString());
+//                        SXNH = dayMap.get("sxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxnh")).toString());
+//                        XXNH = dayMap.get("xxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxnh")).toString());
+//                        SXGL = dayMap.get("sxgl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxgl")).toString());
+//                        XXGL = dayMap.get("xxgl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxgl")).toString());
+//                        PL = dayMap.get("pl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pl")).toString());
+//
+//                        //计算平衡度
+//                        if (SXGL != null && XXGL != null) {
+//                            if (SXGL == 0) {
+//                                PHL = Float.MAX_VALUE;
+//                            } else {
+//                                PHL = XXGL / SXGL;
+//                            }
+//                        }
+//                        if (SXDL != null && XXDL != null && Math.abs(SXDL) > 0) {
+//                            PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
+//                        }
+//                    }
 
-                        HY = dayMap.get("hy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("hy")).toString());
-                        TY = dayMap.get("ty") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("ty")).toString());
-                        WD = dayMap.get("wd") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("wd")).toString());
-                        PJDL = dayMap.get("pjdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdl")).toString());
-                        PJDY = dayMap.get("pjdy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pjdy")).toString());
-                        SXDL = dayMap.get("sxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxdl")).toString());
-                        XXDL = dayMap.get("xxdl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxdl")).toString());
-                        SXNH = dayMap.get("sxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxnh")).toString());
-                        XXNH = dayMap.get("xxnh") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxnh")).toString());
-                        SXGL = dayMap.get("sxgl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("sxgl")).toString());
-                        XXGL = dayMap.get("xxgl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("xxgl")).toString());
-                        PL = dayMap.get("pl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("pl")).toString());
+                    //暂时从实时库中取值
 
-                        //计算平衡度
-                        if (SXGL != null && XXGL != null) {
-                            if (SXGL == 0) {
-                                PHL = Float.MAX_VALUE;
-                            } else {
-                                PHL = XXGL / SXGL;
-                            }
+                    try {
+                        if (getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
+                            CHONG_CHENG = getRealData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());
+                            CHONG_CI = getRealData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase());
+                            ZDZH = getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase());
+                            ZXZH = getRealData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase());
+                            BX = getRealData(code, RedisKeysEnum.BENG_XIAO.toString());
                         }
-                        if (SXDL != null && XXDL != null && Math.abs(SXDL) > 0) {
-                            PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
-                        }
+                        String rtHy = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase());
+                        String rtTy = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase());
+                        String rtWd = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase());
+                        String rtPjdl = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.I_B.toString().toLowerCase());
+                        String rtPjdy = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.U_B.toString().toLowerCase());
+                        String rtPl = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.GV_ZB.toString().toLowerCase());
+                        String rtSXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_SHANG.toString());
+                        String rtXXDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DL_XIA.toString());
+                        String rtSXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.SHANG_NH.toString());
+                        String rtXXNH = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.XIA_NH.toString());
+                        String rtSXGL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GL_SHANG.toString());
+                        String rtXXGL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GL_XIA.toString());
+                        HY = rtHy == null ? null : Float.valueOf(rtHy);
+                        TY = rtTy == null ? null : Float.valueOf(rtTy);
+                        WD = rtWd == null ? null : Float.valueOf(rtWd);
+                        PJDL = rtPjdl == null ? null : Float.valueOf(rtPjdl);
+                        PJDY = rtPjdy == null ? null : Float.valueOf(rtPjdy);
+                        PL = rtPl == null ? null : Float.valueOf(rtPl);
+                        SXDL = rtSXDL == null ? null : Float.valueOf(rtSXDL);
+                        XXDL = rtXXDL == null ? null : Float.valueOf(rtXXDL);
+                        SXNH = rtSXNH == null ? null : Float.valueOf(rtSXNH);
+                        XXNH = rtXXNH == null ? null : Float.valueOf(rtXXNH);
+                        SXGL = rtSXGL == null ? null : Float.valueOf(rtSXGL);
+                        XXGL = rtXXGL == null ? null : Float.valueOf(rtXXGL);
+                    } catch (Exception e) {
                     }
+
 
                     Calendar startTime1 = Calendar.getInstance();
                     Calendar endTime1 = Calendar.getInstance();
@@ -439,11 +477,16 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     endTime1.set(Calendar.SECOND, 0);
                     endTime1.set(Calendar.MILLISECOND, 0);
                     endTime1.set(Calendar.HOUR_OF_DAY, 0);
-                    Map<String, Object> monthMap = getAvgMonthlyData(code, startTime.getTime(), endTime.getTime());
-                    if (dayMap != null) {
-                        YSL = dayMap.get("rljyxsj") == null ? 0 : Float.parseFloat(((BigDecimal) dayMap.get("rljyxsj")).toString())/1440f;
-                        realtimeDataService.putValue(code, RedisKeysEnum.YSL.toString(), String.valueOf(YSL));    //月时率
+                    try {
+                        Map<String, Object> monthMap = getAvgMonthlyData(code, startTime1.getTime(), endTime1.getTime());
+                        if (monthMap != null) {
+                            YSL = monthMap.get("rljyxsj") == null ? 0 : Float.parseFloat(((BigDecimal) monthMap.get("rljyxsj")).toString()) / 1440f;
+                            realtimeDataService.putValue(code, RedisKeysEnum.YSL.toString(), String.valueOf(YSL));    //月时率
+                        }
+                    } catch (Exception e) {
+                        log.error(youJing.getCode() + "月时率计算错误！");
                     }
+
 
 
                     String rtYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
@@ -464,6 +507,14 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     c.set(Calendar.SECOND, 0);
                     c.set(Calendar.MILLISECOND, 0);
                     c.set(Calendar.HOUR_OF_DAY, 0);
+
+                    float scsj = 0;
+                    try {
+                        int hour = RLJYXSJ == null ? 0 : (RLJYXSJ.intValue() / 60);
+                        float minite = RLJYXSJ % 60;
+                        scsj = hour + minite / 100;
+                    } catch (Exception e) {
+                    }
 
                     try (Connection con = sql2o.open()) {
                         con.createQuery(sql)
@@ -494,7 +545,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .addParameter("HDL", HDL)//耗电量
                                 .addParameter("CYL", CYL)//产液量
                                 .addParameter("YL", YL)//油量
-                                .addParameter("RLJYXSJ", RLJYXSJ)//运行时间
+                                .addParameter("RLJYXSJ", scsj)//运行时间
                                 .addParameter("HY", HY)//回压
                                 .addParameter("TY", TY)//套压
                                 .addParameter("WD", WD)//温度
@@ -521,11 +572,13 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 
                     Float bdxs = (youJing.getBdxs() == null || youJing.getBdxs() <= 0) ? 1f : youJing.getBdxs();  //标定系数
 
+
+
                     try (Connection con = sql2o.open()) {  			//
                         con.createQuery(jzrSql) //
                                 .addParameter("JH", code) //井号
                                 .addParameter("RQ", c.getTime())//日期
-                                .addParameter("SCSJ", RLJYXSJ / 60) //生产时间
+                                .addParameter("SCSJ", scsj) //生产时间
                                 .addParameter("CC", CHONG_CHENG) //冲程
                                 .addParameter("CC1", CHONG_CI) //冲次
                                 .addParameter("TY", TY) //套压
@@ -558,6 +611,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 //                    log.info("{} 昨日产液量：{}  昨日产油量：{}", code, cyl[0], cyl[1]);
 //                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(cyl[0])); //昨日产液量
 //                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(cyl[1])); //昨日产油量
+
+
                     realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), String.valueOf(HDL));  //昨日耗电量
 
                     //清除班累积运算值
@@ -651,7 +706,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                 + "avg(SXGL) as SXGL, "
                 + "avg(XXGL) as XXGL, "
                 + "avg(PL) as PL "
-                + " from T_WELL_HOURLY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime order by DATE_TIME DESC";
+                + " from T_WELL_HOURLY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime";
 
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
@@ -669,7 +724,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 
     private Map<String, Object> getAvgMonthlyData(String code, Date startTime, Date endTime) {
         String sql = "SELECT avg(RLJYXSJ) as RLJYXSJ "
-                + " from T_WELL_DAILY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime order by DATE_TIME DESC";
+                + " from T_WELL_DAILY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime ";
 
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {

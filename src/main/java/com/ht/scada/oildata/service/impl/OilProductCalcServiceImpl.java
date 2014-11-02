@@ -186,6 +186,12 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                         String glgl = String.valueOf(calc[1]);
                         realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), gtmj);
                         realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), glgl);
+                    } else {//无功图
+                        realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), "0");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

@@ -287,6 +287,12 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         }
 
                     }
+                    
+                    String CTJ = realtimeDataService.getEndTagVarInfo(youJing.getCode(), RedisKeysEnum.CTJ.toString());
+                    if(CTJ != null && !"".equals(CTJ.trim())) {
+                        CHONG_CHONG=CHONG_CI=ZXZH=ZDZH=PHL=HDL=CYL=YL=YXSJ=LJHDL=LJCYL=LJYL=LJYXSJ=HY=TY=WD=PJDL=PJDY=SXDL=XXDL=PL=SXNH=XXNH=SXGL=XXGL=PHL1=null;
+                        WEIYI=ZAIHE=null;
+                    }
 
                     try (Connection con = sql2o.open()) {
                         con.createQuery(sql) //
@@ -514,6 +520,14 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         float minite = RLJYXSJ % 60;
                         scsj = hour + minite / 100;
                     } catch (Exception e) {
+                    }
+                    
+                    String CTJ = realtimeDataService.getEndTagVarInfo(youJing.getCode(), RedisKeysEnum.CTJ.toString());
+                    if(CTJ != null && !"".equals(CTJ.trim())) {
+                        CHONG_CHENG=CHONG_CI=ZXZH=ZDZH=PHL=HDL=HY=TY=WD=PJDL=PJDY=SXDL=XXDL=PL=SXNH=XXNH=SXGL=XXGL=PHL1=null;
+                        CYL=YL=0F;
+                        WEIYI=ZAIHE=null;
+                        scsj=0;
                     }
 
                     try (Connection con = sql2o.open()) {

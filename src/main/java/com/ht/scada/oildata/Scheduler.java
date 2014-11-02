@@ -88,7 +88,7 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-//    @Scheduled(cron = "0 0/10 * * * ? ")
+    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
         oilProductCalcService.oilProductCalcTask();   //功图分析计算
@@ -139,7 +139,7 @@ public class Scheduler {
      /**
      * 每隔五分钟任务
      */
-    @Scheduled(cron = "0 0/5 * * * ? ")
+//    @Scheduled(cron = "0 0/5 * * * ? ")
     private void minite5Task() {
         waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
     }

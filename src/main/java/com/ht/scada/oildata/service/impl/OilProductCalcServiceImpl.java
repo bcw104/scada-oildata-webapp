@@ -20,12 +20,15 @@ import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.WellInfoService;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import org.joda.time.LocalDateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +54,8 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
     @Inject
     protected Sql2o sql2o;
     private Map<String, String> myDateMap = new HashMap<>();
+    private Map<String, Integer> myDateTimeMap = new HashMap<>();
+    DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
     public Sql2o getSql2o() {
         return sql2o;
@@ -78,9 +83,18 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                     if (myDateMap.get(code) != null && myDateMap.get(code).equals(newDateTime)) {
                         continue;
                     }
+
+                    Integer minite = LocalDateTime.parse(newDateTime, fmt).getMinuteOfHour() / 30 * 30;
+                    Integer lastMinite = myDateTimeMap.get(code);
+                    if (lastMinite != null && lastMinite == minite) {
+                        continue;
+                    }
+
+                    myDateTimeMap.put(code, minite);
                     myDateMap.put(code, newDateTime);
+
                     // 2.判断是否有功图
-                    if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
+                    if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0 && getRealtimeData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
                         float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), ",");
                         float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), ",");
                         float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
@@ -127,7 +141,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             String phddl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU_DL));
                             String sxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_SHANG));
                             String xxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_XIA));
-                            
+
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_CYL.toString(), shCYL);
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_LEIJI_CYL.toString(), ljCYL);
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_YUGU_CYL.toString(), ygCYL);
@@ -149,25 +163,28 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                             realtimeDataService.putValue(code, RedisKeysEnum.DL_SHANG.toString(), sxdl);
                             realtimeDataService.putValue(code, RedisKeysEnum.DL_XIA.toString(), xxdl);
                             realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV_DL.toString(), phddl);
-                            
+
                             //泵效
                             Object bx = resultMap.get(GTReturnKeyEnum.BENG_XIAO);
-                            if(bx != null) {
-                                realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), String.valueOf((Float)bx));
+                            if (bx != null) {
+                                realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), String.valueOf((Float) bx));
                             }
-                            
+
                         } catch (Exception e) {
                             log.info(code + "功图分析出现异常：" + e.toString());
                         }
 
                         //***************START 威尔泰克功图 ******************
-                        GTSC gtsc = findOneGTFXRecordByCode(code);
+                        Calendar startTime = Calendar.getInstance();
+                        startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 2);
+                        //取两个小时内最新的功图
+                        GTSC gtsc = findOneGTFXRecordByCode(code, startTime.getTime());
                         if (gtsc != null) {
                             float wetkCyl = gtsc.getRCYL1();
                             float wetkYl = gtsc.getRCYL();
                             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), String.valueOf(wetkCyl));
                             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), String.valueOf(wetkYl));
-                            
+
                             //泵功图
 //                            String bgt_weiyi = String2FloatArrayUtil.string2OrientationStringArrayUtil(gtsc.getBGT(), String2FloatArrayUtil.ORIENTATION_X, ";");
 //                            String bgt_zaihe = String2FloatArrayUtil.string2OrientationStringArrayUtil(gtsc.getBGT(), String2FloatArrayUtil.ORIENTATION_Y, ";");
@@ -177,6 +194,10 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
 //                            if (bgt_zaihe != null) {
 //                                realtimeDataService.putValue(code, RedisKeysEnum.WETK_BGT.toString(), bgt_zaihe); //泵功图
 //                            }
+                        } else {//两个小时内无数据
+                            realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
+                            realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), "0");
+                            realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), "0");
                         }
                         //***************END 威尔泰克功图 ******************
 
@@ -201,19 +222,21 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
         log.info("完成功图分析任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
-    private GTSC findOneGTFXRecordByCode(String code) {
+    private GTSC findOneGTFXRecordByCode(String code, Date date) {
         //String sql = "select q.RCYL1 rcyl1,q.RCYL rcyl,s.JH jh,q.CJSJ cjsj,s.WY wy,q.BGT bgt FROM QYSCZH.SCY_SGT_GTCJ s inner join QYSCZH.SCY_SGT_GTFX q on s.JH=:CODE AND q.SCJSBZ = 1 AND q.JH=s.JH ORDER BY q.CJSJ DESC ";//
         String sql = "SELECT" +//
                 "  q.RCYL1 rcyl1, " +//
                 "  q.RCYL  rcyl, " +//
-                "  s.JH    jh, " +//
+                "  q.JH    jh, " +//
                 "  q.CJSJ  cjsj " +//
-//                "  s.WY    wy, " +//
-//                "  q.BGT   bgt " +//
-                " FROM QYSCZH.SCY_SGT_GTCJ s LEFT JOIN QYSCZH.SCY_SGT_GTFX q ON q.JH = s.JH AND s.cjsj = q.cjsj AND s.id = q.gtid "
-                + " WHERE q.SCJSBZ=1 and s.JH = :CODE and q.cjsj is not null ORDER BY q.CJSJ DESC ";
+                //                "  s.WY    wy, " +//
+                //                "  q.BGT   bgt " +//
+                //                " FROM QYSCZH.SCY_SGT_GTCJ s LEFT JOIN QYSCZH.SCY_SGT_GTFX q ON q.JH = s.JH AND s.cjsj = q.cjsj AND s.id = q.gtid "
+                //                + " WHERE q.SCJSBZ=1 and s.JH = :CODE and q.cjsj is not null ORDER BY q.CJSJ DESC ";
+                " FROM QYSCZH.SCY_SGT_GTFX q  "
+                + " WHERE q.SCJSBZ=1 and q.JH = :CODE and q.cjsj is not null and q.CJSJ>=:DATE ORDER BY q.CJSJ DESC ";
         try (Connection con = sql2o.open()) {  //
-            org.sql2o.Query query = con.createQuery(sql).addParameter("CODE", code);
+            org.sql2o.Query query = con.createQuery(sql).addParameter("CODE", code).addParameter("DATE", date);
             return query.executeAndFetchFirst(GTSC.class);
         }
     }

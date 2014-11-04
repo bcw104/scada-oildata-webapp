@@ -20,6 +20,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import javax.inject.Inject;
+import org.joda.time.LocalDateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +46,10 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
     @Autowired
     private WellInfoService wellInfoService;
     private Map<String, String> dateMap = new HashMap<>();
+    private Map<String, Integer> dateTimeMap = new HashMap<>();
+    
+    DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+    
     @Inject
     protected Sql2o sql2o;
 
@@ -81,10 +88,19 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
                     if (dateMap.get(code) != null && dateMap.get(code).equals(newDateTime)) {
                         continue;
                     }
+                    
+                    
+                    Integer minite = LocalDateTime.parse(newDateTime, fmt).getMinuteOfHour() / 30 * 30;
+                    Integer lastMinite = dateTimeMap.get(code);
+                    if(lastMinite != null && lastMinite == minite) {
+                        continue;
+                    }
+                    
+                    dateTimeMap.put(code, minite);
                     dateMap.put(code, newDateTime);
-
+                    
                     // 2.判断是否有功图
-                    if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
+                    if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0 && getRealtimeData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase()) > 0) { // 有功图才写进行持久化
                         WetkSGT wetkSGT = new WetkSGT();
                         gtId = CommonUtils.getCode();
                         CC = getRealtimeData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());

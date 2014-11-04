@@ -182,8 +182,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                             realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYL.toString(), String.valueOf(LJYL));
                         }
                     }
-
-
                     //***********************结束   计算螺杆泵液量*****************
 
 
@@ -440,7 +438,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 //                    }
 
                     //暂时从实时库中取值
-
                     try {
                         if (getRealData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
                             CHONG_CHENG = getRealData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());
@@ -476,7 +473,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     } catch (Exception e) {
                     }
 
-
                     Calendar startTime1 = Calendar.getInstance();
                     Calendar endTime1 = Calendar.getInstance();
                     endTime1.set(Calendar.MINUTE, 0);
@@ -484,16 +480,14 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     endTime1.set(Calendar.MILLISECOND, 0);
                     endTime1.set(Calendar.HOUR_OF_DAY, 0);
                     try {
-                        Map<String, Object> monthMap = getAvgMonthlyData(code, startTime1.getTime(), endTime1.getTime());
+                        Map<String, Object> monthMap = getAvgMonthlyData(code, endTime1.getTime(), startTime1.getTime());
                         if (monthMap != null) {
-                            YSL = monthMap.get("rljyxsj") == null ? 0 : Float.parseFloat(((BigDecimal) monthMap.get("rljyxsj")).toString()) / 1440f;
+                            YSL = monthMap.get("rljyxsj") == null ? 0 : Float.parseFloat(((BigDecimal) monthMap.get("rljyxsj")).toString()) / 24f;
                             realtimeDataService.putValue(code, RedisKeysEnum.YSL.toString(), String.valueOf(YSL));    //月时率
                         }
                     } catch (Exception e) {
                         log.error(youJing.getCode() + "月时率计算错误！");
                     }
-
-
 
                     String rtYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
                     String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
@@ -586,8 +580,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 
                     Float bdxs = (youJing.getBdxs() == null || youJing.getBdxs() <= 0) ? 1f : youJing.getBdxs();  //标定系数
 
-
-
                     try (Connection con = sql2o.open()) {  			//
                         con.createQuery(jzrSql) //
                                 .addParameter("JH", code) //井号
@@ -613,19 +605,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         log.info(code + "发生异常！");
                         e.printStackTrace();
                     }
-
-                    //昨日产液量、昨日产油量、昨日耗电量
-//                    Calendar cal = Calendar.getInstance();
-//                    cal.set(Calendar.MINUTE, 0);
-//                    cal.set(Calendar.SECOND, 0);
-//                    cal.set(Calendar.MILLISECOND, 0);
-//                    Date eDate = cal.getTime();
-//                    Date sDate = new Date(cal.getTime().getTime() - 24 * 60 * 60000);
-//                    float[] cyl = getCylAndYlByJHAndTime(code, sDate, eDate);
-//                    log.info("{} 昨日产液量：{}  昨日产油量：{}", code, cyl[0], cyl[1]);
-//                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(cyl[0])); //昨日产液量
-//                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(cyl[1])); //昨日产油量
-
 
                     realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), String.valueOf(HDL));  //昨日耗电量
 
@@ -990,4 +969,5 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         }
         return result;
     }
+
 }

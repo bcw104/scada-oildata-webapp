@@ -1,8 +1,5 @@
 package com.ht.scada.oildata.webapp.entity;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
-
 import org.springframework.data.jpa.domain.AbstractPersistable;
 /**
  * 示功图测试类
@@ -10,7 +7,7 @@ import org.springframework.data.jpa.domain.AbstractPersistable;
  *
  */
 //@Entity
-@Table(name="T_Test_SGT")
+//@Table(name="T_Test_SGT")
 public class TestSGT extends AbstractPersistable<Integer>{
 	
 	/**

@@ -23,15 +23,15 @@
 		http://www.springframework.org/schema/jms/spring-jms-3.2.xsd
 		http://www.springframework.org/schema/cache 
 		http://www.springframework.org/schema/cache/spring-cache.xsd
-                http://www.springframework.org/schema/task
-                http://www.springframework.org/schema/task/spring-task-3.2.xsd
+       http://www.springframework.org/schema/task
+       http://www.springframework.org/schema/task/spring-task-3.2.xsd
 		http://www.springframework.org/schema/util 
 		http://www.springframework.org/schema/util/spring-util.xsd">
 
 
     <description>Spring公共配置</description>
 
-    <context:property-placeholder ignore-unresolvable="true" location="classpath*:/redis.properties" />
+   
 
     <import resource="classpath:applicationContext-redis.xml" />
     <import resource="classpath:applicationContext-jpa.xml" />
@@ -41,7 +41,8 @@
     <context:annotation-config/>
     <!--<context:component-scan base-package="com.ht.scada.**.entity, com.ht.scada.**.service.impl">-->
     <context:component-scan base-package="com.ht.scada.common.tag.entity, com.ht.scada.common.tag.dao, com.ht.scada.common.tag.service, com.ht.scada.common.tag.service.impl,
-		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata, com.ht.scada.data.service, com.ht.scada.data.service.impl">
+		, com.ht.scada.oildata.service,com.ht.scada.oildata.service.impl, com.ht.scada.oildata, com.ht.scada.data.service, com.ht.scada.data.service.impl
+		, com.ht.scada.security.entity">
         <!--<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
     </context:component-scan>
         
@@ -51,6 +52,33 @@
     <!--<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:configLocation="classpath:/ehcache.xml" />-->
     <!--定时任务 -->
     <task:annotation-driven/>
+
+    <bean id="quirks" class="org.sql2o.quirks.OracleQuirks" />
+    <bean id="sql2o" class="org.sql2o.Sql2o" >
+        <constructor-arg ref="dataSource"/>
+        <constructor-arg ref="quirks"/>
+        <!--<property name="dataSource" ref="dataSource"></property>-->
+    </bean>
+    <!--<bean id="sql2o" class="org.sql2o.Sql2o" >-->
+    <!--<constructor-arg ref="dataSource"></constructor-arg>-->
+    <!--</bean>-->
+    
+    <!--<context:property-placeholder ignore-unresolvable="true" location="classpath*:/config.properties" />-->
+    
+    <bean
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+        <property name="ignoreResourceNotFound" value="true" />
+        <property name="locations">
+            <list>
+                <!--<value>file:config.properties</value>-->
+                <value>file:${user.dir}/config.properties</value>
+                <value>classpath*:config.properties</value>
+            </list>
+        </property>
+    </bean>
+
     <!-- 启动运行 -->
-    <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="init"></bean>-->
+    <bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="testYourMathod"/>
+    <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler"/>-->
 </beans>

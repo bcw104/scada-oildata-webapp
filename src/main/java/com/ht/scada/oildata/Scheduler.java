@@ -120,7 +120,7 @@ public class Scheduler {
         waterWellDataCalcService.runBanBaoTask();
     }
 
-    @Scheduled(cron = "0 2 8 * * ? ")
+    @Scheduled(cron = "0 7 8 * * ? ")
     private void waterRiBaoTask() {
         waterWellDataCalcService.runRiBaoTask();
     }

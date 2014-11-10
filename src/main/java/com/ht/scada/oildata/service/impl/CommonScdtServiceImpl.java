@@ -178,10 +178,14 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     @Override
     public void test() {
 //        txzd();//通讯中断
-//        gtDataToRTDB();
-        yjlx();
+        gtDataToRTDB();
+//        yjlx();
+//        deleteRtdb();
     }
 
+    /**
+     * 通讯状态
+     */
     private void txzd() {
         int i = 1;
         for (EndTag endTag : Scheduler.youJingList) {
@@ -203,6 +207,9 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         }
     }
 
+    /**
+     * 从历史库中导出功图到实时库
+     */
     private void gtDataToRTDB() {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date start = null;
@@ -237,6 +244,49 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 //                        realtimeDataService1.updateEndModel(youJing.getCode() + "_" + String.valueOf(data.getDatetime().getTime()) + "_SGT", map);
                     }
                     System.out.println(i + ":" + youJing.getCode() + " 功图数据写入完毕！");
+                } catch (Exception e) {
+                    log.error(e.toString());
+                }
+                i++;
+            }
+        }
+    }
+
+    /**
+     * 删除实时库历史功图
+     */
+    private void deleteRtdb() {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//        Date start = null;
+        Date end = null;
+        try {
+//            start = df.parse("2014-10-15 0:0:0");
+//            end = df.parse("2014-10-30 0:0:0");
+//            start = df.parse(Config.INSTANCE.getConfig().getString("start", "2014-10-15 0:0:0"));
+            end = df.parse(Config.INSTANCE.getConfig().getString("end", "2014-10-17 0:0:0"));
+        } catch (ParseException ex) {
+            java.util.logging.Logger.getLogger(CommonScdtServiceImpl.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
+            int i = 1;
+            for (EndTag youJing : Scheduler.youJingList) {
+                try {
+                    if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
+                        continue;
+                    }
+
+//                    List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", 0, -1);
+//                    if (list != null) {
+//                        for(String key : list) {
+//                            if(new Date(Long.parseLong(key)).before(end)) {
+//                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_SGT"); 
+//                                realtimeDataService1.remListValue(youJing.getCode() + "_SGT_TIME", 0, key);
+//                                System.out.println("删除 " +youJing.getCode() +" " + df.format(new Date(Long.parseLong(key))) + " 功图！");
+//                            }
+//                        }
+//                    }
+                    System.out.println(i + ":" + youJing.getCode() + " 功图数据删除完毕！");
                 } catch (Exception e) {
                     log.error(e.toString());
                 }

@@ -57,13 +57,12 @@
     <bean id="sql2o" class="org.sql2o.Sql2o" >
         <constructor-arg ref="dataSource"/>
         <constructor-arg ref="quirks"/>
+    </bean>
+    <bean id="sql2o1" class="org.sql2o.Sql2o" >
+        <constructor-arg ref="dataSource1"/>
+        <constructor-arg ref="quirks"/>
         <!--<property name="dataSource" ref="dataSource"></property>-->
     </bean>
-    <!--<bean id="sql2o" class="org.sql2o.Sql2o" >-->
-    <!--<constructor-arg ref="dataSource"></constructor-arg>-->
-    <!--</bean>-->
-    
-    <!--<context:property-placeholder ignore-unresolvable="true" location="classpath*:/config.properties" />-->
     
     <bean
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">

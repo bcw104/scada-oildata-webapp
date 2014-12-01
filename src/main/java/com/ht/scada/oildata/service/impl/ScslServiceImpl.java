@@ -30,8 +30,8 @@ import org.sql2o.Sql2o;
 @Transactional
 @Service("scslService")
 public class ScslServiceImpl implements ScslService {
-    private static final Logger log = LoggerFactory.getLogger(ScslServiceImpl.class);
 
+    private static final Logger log = LoggerFactory.getLogger(ScslServiceImpl.class);
     @Autowired
     private RealtimeDataService realtimeDataService;
     @Inject
@@ -64,7 +64,7 @@ public class ScslServiceImpl implements ScslService {
 
             try (Connection con = sql2o.beginTransaction()) {
                 Query query = con.createQuery(updateSql);
-                
+
                 for (EndTag youJing : Scheduler.youJingList) {
                     String code = youJing.getCode();
                     Integer isOn = yxMap.get(code) == null ? null : (Boolean.valueOf(yxMap.get(code)) ? 1 : 0);
@@ -110,22 +110,32 @@ public class ScslServiceImpl implements ScslService {
                     if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
                         String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
                         for (String varName : framesLine) {
-                            if (varName.contains("yc|")) {
+                            if (varName.contains("yx|")) {
                                 String varNames[] = varName.trim().split("\\|");
                                 String varName1 = varNames[1];
                                 String codeName = varNames[2];
                                 String varNameStr = varNames[3];
-                                if (varName1.contains("shll")) { //瞬时流量
-                                    String ssllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (ssllValue != null) {
-                                        isOn = Float.valueOf(ssllValue)>0.1 ? 1 : 0;
+//                                if (varName1.contains("shll")) { //瞬时流量
+//                                    String ssllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+//                                    if (ssllValue != null) {
+//                                        isOn = Float.valueOf(ssllValue)>0.1 ? 1 : 0;
+//                                    }
+//                                    break;
+//                                }
+                                if (varName1.contains("fmqg")) { //阀门状态
+                                    String fmqgValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                    if (fmqgValue != null) {
+                                        if ("true".equals(fmqgValue)) {
+                                            isOn = 0;
+                                        } else {
+                                            isOn = 1;
+                                        }
                                     }
-                                    break;
                                 }
                             }
                         }
                     }
-                    
+
                     query.addParameter("CODE", shuiJing.getCode())
                             .addParameter("MINITE", String.valueOf(minite))
                             .addParameter("ISON", isOn)

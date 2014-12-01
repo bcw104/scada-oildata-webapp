@@ -138,6 +138,9 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                                     String gxylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
                                     if (gxylValue != null) {
                                         GY = CommonUtils.formatFloat(Float.parseFloat(gxylValue), 2);
+                                        if(GY<=0.1) {   //处理干压为0影响统计数据
+                                            GY = null;
+                                        }
                                     }
                                 }
                             }
@@ -160,8 +163,12 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                     }
                     //更新班累积耗电量
                     realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), String.valueOf(LJZSL));
-
+                } else {    //读不上来累积流量
+                    LJZSL = banLJZSL;
+                    //更新班累积耗电量
+                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), String.valueOf(LJZSL));
                 }
+                
                 if (LJZSL != null && RPZL != null) {
                     CQL = LJZSL - RPZL;
                 }
@@ -172,6 +179,23 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 String rtLjyxsj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
                 float ljyxsjValue = rtLjyxsj == null ? 0f : Float.valueOf(rtLjyxsj);
                 Float LJYXSJ = ljyxsjValue + YXSJ;
+
+                float scsj = 0;
+                try {
+                    int hour1 = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
+                    float minite = YXSJ % 60;
+                    scsj = hour1 + minite / 100;
+                } catch (Exception e) {
+                }
+
+                float ljscsj = 0;
+                try {
+                    int hour2 = LJYXSJ == null ? 0 : (LJYXSJ.intValue() / 60);
+                    float minite2 = LJYXSJ % 60;
+                    ljscsj = hour2 + minite2 / 100;
+                } catch (Exception e) {
+                }
+
                 //更新运行时间
                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), String.valueOf(LJYXSJ));
                 //***************************结束  计算运行时间****************
@@ -202,8 +226,8 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .addParameter("PSJ", PSJ) //配水间
                             .addParameter("SAVE_TIME", new Date())//转储时间
                             .addParameter("DATE_TIME", c.getTime())//数据时间
-                            .addParameter("YXSJ", YXSJ)//运行时间
-                            .addParameter("LJYXSJ", LJYXSJ)//累积运行时间
+                            .addParameter("YXSJ", scsj)//运行时间
+                            .addParameter("LJYXSJ", ljscsj)//累积运行时间
                             .addParameter("GY", GY)//干压
                             .addParameter("ZRYL", ZRYL)//注入压力
                             .addParameter("SSLL", SSLL)//瞬时流量
@@ -281,6 +305,11 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 c.set(Calendar.SECOND, 0);
                 c.set(Calendar.MILLISECOND, 0);
                 c.set(Calendar.HOUR_OF_DAY, 0);
+
+                //23.55以上认为是24
+                if (YXSJ != null && YXSJ >= 1435) {
+                    YXSJ = 1440f;
+                }
 
                 float scsj = 0;
                 try {
@@ -390,9 +419,9 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                                     String fmqgValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
                                     if (fmqgValue != null) {
                                         if ("true".equals(fmqgValue)) {
-                                            FMZT = 1;
-                                        } else {
                                             FMZT = 0;
+                                        } else {
+                                            FMZT = 1;
                                         }
                                     }
                                 } else if (varName1.contains("fmkd")) { //阀门开度
@@ -508,7 +537,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
     private float getYxsj(String code) {
         float yxsj = 0f;
         String sql = "SELECT count(IS_ON) as is_on "
-                + " from T_WATER_WELL_CALC_DATA t where code=:CODE and IS_ON = 1 ";
+                + " from T_WATER_WELL_CALC_DATA t where code=:CODE and IS_ON = 0 ";
 
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
@@ -519,7 +548,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
         if (list != null && !list.isEmpty()) {
             yxsj = list.get(0).get("is_on") == null ? 0f : Float.parseFloat(((BigDecimal) list.get(0).get("is_on")).toString());
         }
-        return yxsj;
+        return 120 - yxsj;
     }
 
     /**

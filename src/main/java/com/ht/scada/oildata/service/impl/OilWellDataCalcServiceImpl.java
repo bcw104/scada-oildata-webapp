@@ -42,7 +42,7 @@ import org.sql2o.data.Row;
 @Transactional
 @Service("oilWellDataCalcService")
 public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
-    
+
     private static final Logger log = LoggerFactory.getLogger(OilWellDataCalcServiceImpl.class);
     @Autowired
     private RealtimeDataService realtimeDataService;
@@ -51,11 +51,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
     @Autowired
     private EndTagService endTagService;
     public List<EndTag> youJingList;
-    
+
     public Sql2o getSql2o() {
         return sql2o;
     }
-    
+
     public void setSql2o(Sql2o sql2o) {
         this.sql2o = sql2o;
     }
@@ -72,6 +72,50 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
             for (EndTag youJing : Scheduler.youJingList) {
                 try {
                     String code = youJing.getCode();
+                    //班报时间段
+                    Calendar c = Calendar.getInstance();
+                    c.set(Calendar.MINUTE, 0);
+                    c.set(Calendar.SECOND, 0);
+                    c.set(Calendar.MILLISECOND, 0);
+                    int hour = c.get(Calendar.HOUR_OF_DAY);
+                    if (hour % 2 != 0) {
+                        c.set(Calendar.HOUR_OF_DAY, hour + 1);
+                    } else {
+                        c.set(Calendar.HOUR_OF_DAY, hour);
+                    }
+                    int hourOfDay = c.get(Calendar.HOUR_OF_DAY);
+                    String SJD = String.valueOf(hourOfDay) + ":00";
+
+                    //第一班先清除累加值
+                    try {
+                        if (SJD.equals("10:00")) {
+                            String BAN_LJYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
+                            if (BAN_LJYXSJ != null && (Integer.valueOf(BAN_LJYXSJ)) > 0) {
+                                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
+                            }
+
+                            String BAN_LJCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
+                            if (BAN_LJCYL != null && (Integer.valueOf(BAN_LJCYL)) > 0) {
+                                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJCYL.toString(), "0");
+                            }
+
+                            String BAN_LJYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString());
+                            if (BAN_LJYL != null && (Integer.valueOf(BAN_LJYL)) > 0) {
+                                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYL.toString(), "0");
+                            }
+
+                            String BAN_LJHDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJHDL.toString());
+                            if (BAN_LJHDL != null && (Integer.valueOf(BAN_LJHDL)) > 0) {
+                                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJHDL.toString(), "0");
+                            }
+                        }
+                    } catch (Exception e) {
+                        realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJCYL.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYL.toString(), "0");
+                        realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJHDL.toString(), "0");
+                    }
+
                     String sql = "insert into T_Well_Hourly_Data "
                             + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
                             + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,HDL,CYL,YL,YXSJ,LJHDL,LJCYL,LJYL,LJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,PL,SXNH,XXNH,SXGL,XXGL,SJD,PHL1) "
@@ -135,7 +179,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     //上一班的累计值
                     float ljcylValue = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString()) == null ? 0f : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString()));
                     float ljylValue = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString()) == null ? 0f : Float.valueOf(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString()));
-                    
+
                     Float LJCYL = ljcylValue + CYL;
                     Float LJYL = ljylValue + YL;
 
@@ -169,7 +213,6 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
                     //***************************结束  计算耗电量*******************
 
-
                     //***********************开始   计算螺杆泵液量*****************
                     String lljsyNum = null;
                     if (youJing.getSubType().equals(EndTagSubTypeEnum.LUO_GAN_BENG.toString())) {
@@ -199,6 +242,23 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     String rtLjyxsj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
                     float ljyxsjValue = rtLjyxsj == null ? 0f : Float.valueOf(rtLjyxsj);
                     Float LJYXSJ = ljyxsjValue + YXSJ;
+                    
+                    float scsj = 0;
+                    try {
+                        int hour1 = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
+                        float minite = YXSJ % 60;
+                        scsj = hour1 + minite / 100;
+                    } catch (Exception e) {
+                    }
+                    
+                    float ljscsj = 0;
+                    try {
+                        int hour2 = LJYXSJ == null ? 0 : (LJYXSJ.intValue() / 60);
+                        float minite2 = LJYXSJ % 60;
+                        ljscsj = hour2 + minite2 / 100;
+                    } catch (Exception e) {
+                    }
+                    
                     //更新运行时间
                     realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), String.valueOf(LJYXSJ));
                     //***************************结束  计算运行时间****************
@@ -256,19 +316,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
                     //*************************结束  计算平衡率*****************************************
 
-                    Calendar c = Calendar.getInstance();
-                    c.set(Calendar.MINUTE, 0);
-                    c.set(Calendar.SECOND, 0);
-                    c.set(Calendar.MILLISECOND, 0);
-                    int hour = c.get(Calendar.HOUR_OF_DAY);
-                    
-                    if (hour % 2 != 0) {
-                        c.set(Calendar.HOUR_OF_DAY, hour + 1);
-                    } else {
-                        c.set(Calendar.HOUR_OF_DAY, hour);
-                    }
-                    int hourOfDay = c.get(Calendar.HOUR_OF_DAY);
-                    String SJD = String.valueOf(hourOfDay) + ":00";
+
 
                     //更新累积及预估
                     realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_LEIJI_CYL.toString(), String.valueOf(LJCYL));
@@ -291,15 +339,15 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         if (youJing.getSubType().equals(EndTagSubTypeEnum.LUO_GAN_BENG.toString())) {
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_LLJSYLL.toString(), lljsyNum == null ? "0" : lljsyNum);
                         }
-                        
                     }
-                    
+
                     String CTJ = realtimeDataService.getEndTagVarInfo(youJing.getCode(), RedisKeysEnum.CTJ.toString());
                     if (CTJ != null && !"".equals(CTJ.trim())) {
                         CHONG_CHONG = CHONG_CI = ZXZH = ZDZH = PHL = HDL = CYL = YL = YXSJ = LJHDL = LJCYL = LJYL = LJYXSJ = HY = TY = WD = PJDL = PJDY = SXDL = XXDL = PL = SXNH = XXNH = SXGL = XXGL = PHL1 = null;
                         WEIYI = ZAIHE = null;
+                        scsj = 0;
                     }
-                    
+
                     try (Connection con = sql2o.open()) {
                         con.createQuery(sql) //
                                 .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
@@ -326,12 +374,12 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .addParameter("PHL1", PHL1)//平衡率
                                 .addParameter("HDL", HDL)//耗电量
                                 .addParameter("CYL", CYL)//产液量
-                                .addParameter("YL", YL)//油量
+                                .addParameter("YL", CYL * (1 - HS / 100))//油量
                                 .addParameter("LJHDL", LJHDL)//累积耗电量
                                 .addParameter("LJCYL", LJCYL)//累积产液量
                                 .addParameter("LJYL", LJYL)//累积液量
-                                .addParameter("YXSJ", YXSJ)//运行时间
-                                .addParameter("LJYXSJ", LJYXSJ)//累积运行时间
+                                .addParameter("YXSJ", scsj)//运行时间
+                                .addParameter("LJYXSJ", ljscsj)//累积运行时间
                                 .addParameter("HY", HY)//回压
                                 .addParameter("TY", TY)//套压
                                 .addParameter("WD", WD)//温度
@@ -355,18 +403,18 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         }
         log.info("班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
     }
-    
+
     @Override
     public void runRiBaoTask() {
         log.info("日报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
-        
+
         youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         List<EndTag> syjList = endTagService.getByType(EndTagTypeEnum.SHUI_YUAN_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : youJingList) {
                 try {
                     String code = youJing.getCode();
-                    
+
                     String sql = "Insert into T_Well_Daily_Data "
                             + "(ID, CODE, BENG_JING, HAN_SHUI, DYM, YYMD,TRQXDMD, SMD,QYB,BENG_SHEN,BZSZ,BZXZ,SAVE_TIME,DATE_TIME,CHONG_CHENG,"
                             + "CHONG_CI,MIN_ZAIHE,MAX_ZAIHE,WEIYI,ZAIHE,PHL,PHL1,HDL,CYL,YL,RLJYXSJ,HY,TY,WD,PJDL,PJDY,SXDL,XXDL,SXNH,XXNH,SXGL,XXGL,PL,BX,CQL,XS) "
@@ -403,7 +451,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     Float PHL = null, PHL1 = null;
                     //从实时库中获取已经累积的值
                     Float HDL = null, CYL = 0f, YL = null, RLJYXSJ = null;
-                    
+
                     Calendar startTime = Calendar.getInstance();
                     Calendar endTime = Calendar.getInstance();
                     startTime.set(Calendar.MINUTE, 0);
@@ -439,7 +487,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 //                            PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
 //                        }
                     }
-                    
+
                     Map<String, Object> gtfxMap = getAvgGTFXData(code, startTime.getTime(), endTime.getTime());
                     if (gtfxMap != null) {
                         CHONG_CHENG = gtfxMap.get("chong_cheng") == null ? null : Float.parseFloat(((BigDecimal) gtfxMap.get("chong_cheng")).toString());
@@ -460,7 +508,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         }
                     } catch (Exception e) {
                     }
-                    
+
                     Calendar startTime1 = Calendar.getInstance();
                     Calendar endTime1 = Calendar.getInstance();
                     endTime1.set(Calendar.MINUTE, 0);
@@ -476,12 +524,12 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     } catch (Exception e) {
                         log.error(youJing.getCode() + "月时率计算错误！");
                     }
-                    
+
                     String rtYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
                     String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
                     String rtYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString());
                     String rtHDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJHDL.toString());
-                    
+
                     RLJYXSJ = rtYXSJ == null ? null : Float.valueOf(rtYXSJ);
 //                    CYL = rtCYL == null ? null : Float.valueOf(rtCYL);
                     YL = rtYL == null ? null : Float.valueOf(rtYL);
@@ -496,6 +544,12 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     c.set(Calendar.MILLISECOND, 0);
                     c.set(Calendar.HOUR_OF_DAY, 0);
                     
+                    //23.55以上认为是24
+                    if(RLJYXSJ != null && RLJYXSJ>=1435) {
+                        RLJYXSJ = 1440f;
+                    }
+                    
+
                     float scsj = 0;
                     try {
                         int hour = RLJYXSJ == null ? 0 : (RLJYXSJ.intValue() / 60);
@@ -503,7 +557,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         scsj = hour + minite / 100;
                     } catch (Exception e) {
                     }
-                    
+
+                    //处理长停井
                     String CTJ = realtimeDataService.getEndTagVarInfo(youJing.getCode(), RedisKeysEnum.CTJ.toString());
                     if (CTJ != null && !"".equals(CTJ.trim())) {
                         CHONG_CHENG = CHONG_CI = ZXZH = ZDZH = PHL = HDL = HY = TY = WD = PJDL = PJDY = SXDL = XXDL = PL = SXNH = XXNH = SXGL = XXGL = PHL1 = null;
@@ -511,7 +566,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         WEIYI = ZAIHE = null;
                         scsj = 0;
                     }
-                    
+
                     Float bdxs = (youJing.getBdxs() == null || youJing.getBdxs() <= 0) ? 1f : youJing.getBdxs();  //标定系数
 
                     try (Connection con = sql2o.open()) {
@@ -564,7 +619,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 
                     //零时电表读数(班报中已更新)
                     String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_DBDS.toString());
-                    
+
                     Float RCSL1 = null;
 
                     //************************开始 处理掺水***********************************
@@ -607,11 +662,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
 
                     //************************结束 处理掺水***********************************
-                    
+
                     String jzrSql = "Insert into QYSCZH.SCY_SRD_YJ "
                             + "(JH, RQ, SCSJ, CC, CC1,TY,HY,RCYL1,DY,SXDL,XXDL,HDL,JKWD,GXSJ,GXR,DBDS,RCYL,HS,RCSL1) "
                             + "values (:JH, :RQ, :SCSJ, :CC, :CC1,:TY,:HY,:RCYL1,:DY,:SXDL,:XXDL,:HDL,:JKWD,:GXSJ,:GXR,:DBDS,:RCYL,:HS,:RCSL1)";
-                    
+
                     try (Connection con = sql2o.open()) { //
                         con.createQuery(jzrSql) //
                                 .addParameter("JH", code) //井号
@@ -668,7 +723,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                 + "FROM ys_dba01@ydk s INNER JOIN ys_dab04@ydk q ON s.JH = :CODE AND s.DYDM = q.DYDM LEFT JOIN YS_DCA03@ydk y "
                 + " ON s.JH = y.JH LEFT JOIN ys_dab05@ydk t on s.DYDM = t.DYDM WHERE s.BJ IS NOT NULL AND s.HS IS NOT NULL "
                 + "ORDER BY s.RQ DESC ) WHERE rownum <= 1";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -692,7 +747,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                 + "FROM ys_dba01@ydk s INNER JOIN ys_dab04@ydk q ON s.JH = :CODE AND s.DYDM = q.DYDM LEFT JOIN YS_DCA03@ydk y "
                 + " ON s.JH = y.JH LEFT JOIN ys_dab05@ydk t on s.DYDM = t.DYDM LEFT JOIN ys_dca021@ydk z on s.JH=z.JH WHERE s.BJ IS NOT NULL AND s.HS IS NOT NULL "
                 + "ORDER BY s.RQ DESC ) WHERE rownum <= 1";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -734,7 +789,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                 + "avg(XXGL) as XXGL, "
                 + "avg(PL) as PL "
                 + " from T_WELL_HOURLY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -748,7 +803,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         }
         return null;
     }
-    
+
     private Map<String, Object> getAvgGTFXData(String code, Date startTime, Date endTime) {
         String sql = "SELECT avg(CC) as CHONG_CHENG, "
                 + "avg(CC1) as CHONG_CI, "
@@ -756,7 +811,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                 + "avg(ZXZH) as ZXZH, "
                 + "avg(RCYL1) as RCYL1 "
                 + " from QYSCZH.SCY_SGT_GTFX t where JH=:CODE and CJSJ>=:startTime and CJSJ<=:endTime and JSBZ=0";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -770,11 +825,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         }
         return null;
     }
-    
+
     private Map<String, Object> getAvgMonthlyData(String code, Date startTime, Date endTime) {
         String sql = "SELECT avg(RLJYXSJ) as RLJYXSJ "
                 + " from T_WELL_DAILY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime ";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -800,7 +855,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         float tzsj = 0f;
         String sql = "SELECT count(IS_ON) as is_on "
                 + " from T_OIL_WELL_CALC_DATA where code=:CODE and IS_ON = 0 ";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -823,7 +878,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
      */
     private Map<String, Object> getLatestDailyData(String code, Date startTime, Date endTime) {
         String sql = "SELECT ljhdl,ljcyl,ljyl,ljyxsj from T_WELL_HOURLY_DATA t where code=:CODE and DATE_TIME>=:startTime and DATE_TIME<=:endTime order by DATE_TIME DESC";
-        
+
         List<Map<String, Object>> list;
         try (Connection con = sql2o.open()) {
             list = con.createQuery(sql)
@@ -837,7 +892,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         }
         return null;
     }
-    
+
     private float getRealData(String code, String varName) {
         String value = realtimeDataService.getEndTagVarInfo(code, varName);
         if (value != null && !value.isEmpty()) {
@@ -856,6 +911,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
     private float getYxsjByCode(String code, Date startTime, Date endTime) {
         String sql = "select * from T_SOE_RECORD where code=:CODE and DEVICE_TIME>=:startTime and DEVICE_TIME<=:endTime and ALARM_TYPE='油井启停报警' order by DEVICE_TIME desc";
         float time = 120f;
+
+
         try (Connection con = sql2o.open()) {
             List<SoeRecord> list = con.createQuery(sql)
                     .setAutoDeriveColumnNames(true)
@@ -864,7 +921,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     .addParameter("endTime", endTime)
                     .executeAndFetch(SoeRecord.class);
             long lastStopTime = startTime.getTime();
-            if (list != null && !list.isEmpty()) {
+            if (list
+                    != null && !list.isEmpty()) {
                 for (SoeRecord s : list) {
                     if (s.getTagName().contains("停")) {
                         lastStopTime = s.getDeviceTime().getTime();
@@ -885,11 +943,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         }
         return time;
     }
-    
+
     public static void main(String args[]) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Calendar cal = Calendar.getInstance();
-        
+
         Calendar startTime = Calendar.getInstance();
         Calendar endTime = Calendar.getInstance();
         startTime.set(Calendar.MINUTE, 0);
@@ -902,9 +960,9 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         log.info(sdf.format(startTime.getTime()));
         startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 2);
         log.info(sdf.format(startTime.getTime()));
-        
+
     }
-    
+
     @Override
     public void testMathod() {
         log.info("开始测试……");
@@ -972,14 +1030,14 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         c.set(Calendar.SECOND, 0);
         c.set(Calendar.MILLISECOND, 0);
         int hour = c.get(Calendar.HOUR_OF_DAY);
-        
+
         if (hour % 2 != 0) {
             c.set(Calendar.HOUR_OF_DAY, hour + 1);
         } else {
             c.set(Calendar.HOUR_OF_DAY, hour);
         }
         String SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
-        
+
         log.info("结束测试……");
     }
 

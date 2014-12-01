@@ -41,4 +41,10 @@
           p:hostName="10.67.179.97" p:port="6379" p:password="" />
     <bean id="redisTemplate1" class="org.springframework.data.redis.core.StringRedisTemplate"
               p:connectionFactory-ref="connectionFactory1" />
+    
+    <bean id="connectionFactory2"
+          class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+          p:hostName="10.67.179.100" p:port="6379" p:password="" />
+    <bean id="redisTemplate2" class="org.springframework.data.redis.core.StringRedisTemplate"
+              p:connectionFactory-ref="connectionFactory2" />
 </beans>

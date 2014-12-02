@@ -4,6 +4,7 @@
  */
 package com.ht.scada.oildata.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.google.common.base.Joiner;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
@@ -12,7 +13,6 @@ import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarGroupEnum;
-import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.Config;
 import com.ht.scada.data.kv.VarGroupData;
 import com.ht.scada.data.service.RealtimeDataService;
@@ -21,6 +21,8 @@ import com.ht.scada.data.service.RealtimeDataService2;
 import com.ht.scada.data.service.impl.HistoryDataServiceImpl2;
 import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.service.CommonScdtService;
+import com.ht.scada.oildata.webapp.entity.SoeRecord;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -67,9 +69,10 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     private HistoryDataServiceImpl2 historyDataServiceImpl2;
     @Inject
     protected Sql2o sql2o;
-    @Inject
-    @Named("sql2o1")
-    protected Sql2o sql2o1;
+//    @Inject
+//    @Named("sql2o1")
+//    protected Sql2o sql2o1;
+    private Map<String, String> myDateMap = new HashMap<>();
 
     public Sql2o getSql2o() {
         return sql2o;
@@ -141,9 +144,6 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         Calendar startTime = Calendar.getInstance();
         startTime.set(Calendar.MONTH, endTime.get(Calendar.MONTH) - 3);
 
-//        System.out.println(LocalDateTime.fromCalendarFields(startTime));
-//        System.out.println(LocalDateTime.fromCalendarFields(endTime));
-
         Map<String, String> map = new HashMap<>();
 
         String sql = "select * from (select avg(scsj) a,jh FROM YS_DBA01@YDK where jh in (select code from t_end_tag where type='YOU_JING')  "
@@ -174,6 +174,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 //        deleteRtdbYc();
 //        getBzgtData();
 //        insertScsjData();
+//        getBzgtDataFromWetk();
+        reportGtAlarm();
         System.out.println("结束测试任务！");
     }
 
@@ -268,7 +270,6 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
                         continue;
                     }
-
                     List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", 0, -1);
                     if (list != null) {
                         for (String key : list) {
@@ -346,7 +347,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     }
 
     /**
-     * 导入标准功图数据
+     * 从10.67.169.100导入标准功图数据
      */
     private void getBzgtData() {
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
@@ -356,12 +357,12 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
                         continue;
                     }
-                    List<Map<String, Object>> list;
-                    try (Connection con = sql2o1.open()) {
-                        list = con.createQuery("select sgt,csrq from dca01 where JH=:code and rownum = 1 order by csrq desc ")
-                                .addParameter("code", youJing.getCode())
-                                .executeAndFetchTable().asList();
-                    }
+                    List<Map<String, Object>> list = null;
+//                    try (Connection con = sql2o1.open()) {
+//                        list = con.createQuery("select sgt,csrq from dca01 where JH=:code and rownum = 1 order by csrq desc ")
+//                                .addParameter("code", youJing.getCode())
+//                                .executeAndFetchTable().asList();
+//                    }
                     if (list != null && !list.isEmpty()) {
                         Map<String, Object> map = list.get(0);
                         String sgt = ((oracle.sql.CLOB) map.get("sgt")).stringValue();
@@ -401,7 +402,111 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         }
     }
 
-    public void insertScsjData() {
+    /**
+     * 从威尔泰克获取标准功图
+     */
+    private void getBzgtDataFromWetk() {
+        log.info("开启初始化标准功图任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        List<Map<String, Object>> list = null;
+        try (Connection con = sql2o.open()) {
+            list = con.createQuery("select well_id,well_time from wellwgstd@WELL").executeAndFetchTable().asList();
+        }
+        if (list != null) {
+            for (Map<String, Object> map : list) {
+                try {
+                    String code = (String) map.get("well_id");
+                    Date date = (Date) map.get("well_time");
+                    String newDateTime = sdf.format(date);
+                    if (myDateMap.get(code) != null && myDateMap.get(code).equals(newDateTime)) {
+                        continue;
+                    }
+                    log.info(code + " 标准功图时间 : " + newDateTime);
+
+                    //标记标准功图
+                    try (Connection con = sql2o.open()) {
+                        con.createQuery("update QYSCZH.SCY_SGT_GTCJ set BZGT='1' where jh = :CODE and cjsj = :CJSJ")
+                                .addParameter("CODE", code)
+                                .addParameter("CJSJ", date)
+                                .executeUpdate();
+                        log.info(code + " 标记标准功图！");
+                    }
+
+                    //将标准功图数据写入实时库
+                    List<Map<String, Object>> dataList;
+                    try (Connection con = sql2o.open()) {
+                        dataList = con.createQuery("select * from wellwgstd@WELL where WELL_ID=:CODE")
+                                .addParameter("CODE", code)
+                                .executeAndFetchTable().asList();
+                    }
+                    if (dataList != null) {
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_GT_DATETIME.toString(), newDateTime);
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_WEI_YI.toString(), (String) dataList.get(0).get("well_moves"));
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_ZAI_HE.toString(), (String) dataList.get(0).get("well_loads"));
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_CHONG_CHENG.toString(), ((BigDecimal) dataList.get(0).get("well_distance")).toString());
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_CHONG_CI.toString(), ((BigDecimal) dataList.get(0).get("well_times")).toString());
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_MAX_ZH.toString(), ((BigDecimal) dataList.get(0).get("well_maxload")).toString());
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_MIN_ZH.toString(), ((BigDecimal) dataList.get(0).get("well_minload")).toString());
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_GGGL.toString(), ((BigDecimal) dataList.get(0).get("well_rodpower")).toString());
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_GTMJ.toString(), ((BigDecimal) dataList.get(0).get("well_area")).toString());
+                        log.info(code + " 标准功图数据写入实时库！");
+                    }
+                    myDateMap.put(code, newDateTime);
+                } catch (Exception e) {
+                    log.error(e.toString());
+                    continue;
+                }
+            }
+        }
+        log.info("完成初始化标准功图任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    private void reportGtAlarm() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.MINUTE, cal.get(Calendar.MINUTE) - 1445);
+
+        List<Map<String, Object>> list = null;
+        try (Connection con = sql2o.open()) {
+            list = con.createQuery("select * from QYSCZH.SYX_BJ_BJXX where BJSJ>:BJSJ")
+                    .addParameter("BJSJ", cal.getTime())
+                    .executeAndFetchTable().asList();
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+        if (list != null) {
+            for (Map<String, Object> map : list) {
+                try {
+                    String code = (String) map.get("bjd");
+                    Date date = (Date) map.get("bjsj");
+                    String bjxx = (String) map.get("bjxx");
+                    String xx1 = ((BigDecimal) map.get("xx1")).toString();
+                    String yz = ((BigDecimal) map.get("yz")).toString();
+                    Integer id = null;
+                    String tagName = "";
+                    for (EndTag endtag : Scheduler.youJingList) {
+                        if (endtag.getCode().equals(code)) {
+                            id = endtag.getId();
+                            tagName = endtag.getName();
+                            break;
+                        }
+                    }
+                    SoeRecord record = new SoeRecord(id, tagName, code, "gt_bj", bjxx, bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz, true, new Date(), null, null, date, 7, "开关井报警");
+
+                    realtimeDataService.publish(JSON.toJSONString(record));
+                } catch (Exception e) {
+                    log.error(e.toString());
+                }
+
+            }
+
+
+        }
+
+    }
+
+    private void insertScsjData() {
         log.info("开始插入运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
             String sql = "Insert into T_Oil_Well_Calc_Data"
@@ -424,7 +529,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     try (Connection con1 = sql2o.open()) {
                         Query query = con1.createQuery(sql);
                         query.addParameter("CODE", code)
-                                .addParameter("ID", UUID.randomUUID().toString().replace("-",""))
+                                .addParameter("ID", UUID.randomUUID().toString().replace("-", ""))
                                 .addParameter("MINITE", String.valueOf(i))
                                 .addParameter("ISON", 1)
                                 .addParameter("LRSJ", new Date())
@@ -437,11 +542,5 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             }
         }
         log.info("结束插入运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-    }
-
-    public static void main(String[] args) {
-        Calendar endCal = Calendar.getInstance();
-        endCal.set(Calendar.DAY_OF_MONTH, endCal.get(Calendar.DAY_OF_MONTH) - 15);
-        System.out.println(LocalDateTime.fromCalendarFields(endCal).toString());
     }
 }

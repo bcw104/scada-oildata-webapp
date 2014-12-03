@@ -48,6 +48,7 @@ public class Scheduler {
     public static List<EndTag> youJingList;
     public static List<EndTag> shuiJingList;
     public static List<String> youCodeList = new ArrayList<>();
+    
 
     /**
      * 测试你的方法，启动时运行
@@ -135,12 +136,37 @@ public class Scheduler {
         scslService.calcWaterWellScsj(c);
 
     }
-    
-     /**
+
+    /**
      * 每隔五分钟任务
      */
 //    @Scheduled(cron = "0 0/5 * * * ? ")
     private void minite5Task() {
         waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
+    }
+
+//    @Scheduled(cron = "0 0/5 * * * ? ")
+    private void reportGtAlarmTask() {
+        Calendar calendar = Calendar.getInstance();
+        try {
+            commonScdtService.reportGtAlarm(calendar);
+        } catch (Exception e) {
+        }
+    }
+
+//    @Scheduled(cron = "0 0/10 * * * ? ")
+    private void getBzgtDataFromWetk() {
+        try {
+            commonScdtService.getBzgtDataFromWetk();
+        } catch (Exception e) {
+        }
+    }
+    
+    @Scheduled(cron = "0 0/10 * * * ? ")
+    private void netChecking() {
+        try {
+            commonScdtService.netChecking();
+        } catch (Exception e) {
+        }
     }
 }

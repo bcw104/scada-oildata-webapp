@@ -22,6 +22,10 @@ import com.ht.scada.data.service.impl.HistoryDataServiceImpl2;
 import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.webapp.entity.SoeRecord;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -175,7 +179,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 //        getBzgtData();
 //        insertScsjData();
 //        getBzgtDataFromWetk();
-        reportGtAlarm();
+//        reportGtAlarm(Calendar.getInstance());
+        netChecking();
         System.out.println("结束测试任务！");
     }
 
@@ -405,9 +410,9 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     /**
      * 从威尔泰克获取标准功图
      */
-    private void getBzgtDataFromWetk() {
+    @Override
+    public void getBzgtDataFromWetk() {
         log.info("开启初始化标准功图任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
@@ -422,7 +427,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     if (myDateMap.get(code) != null && myDateMap.get(code).equals(newDateTime)) {
                         continue;
                     }
-                    log.info(code + " 标准功图时间 : " + newDateTime);
+//                    log.info(code + " 标准功图时间 : " + newDateTime);
 
                     //标记标准功图
                     try (Connection con = sql2o.open()) {
@@ -430,7 +435,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                                 .addParameter("CODE", code)
                                 .addParameter("CJSJ", date)
                                 .executeUpdate();
-                        log.info(code + " 标记标准功图！");
+                        log.info(code + newDateTime + " 标记标准功图！");
                     }
 
                     //将标准功图数据写入实时库
@@ -442,15 +447,15 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     }
                     if (dataList != null) {
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_GT_DATETIME.toString(), newDateTime);
-                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_WEI_YI.toString(), (String) dataList.get(0).get("well_moves"));
-                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_ZAI_HE.toString(), (String) dataList.get(0).get("well_loads"));
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_WEI_YI.toString(), ((String) dataList.get(0).get("well_moves")).replaceAll(";", ","));
+                        realtimeDataService.putValue(code, RedisKeysEnum.BZ_ZAI_HE.toString(), ((String) dataList.get(0).get("well_loads")).replaceAll(";", ","));
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_CHONG_CHENG.toString(), ((BigDecimal) dataList.get(0).get("well_distance")).toString());
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_CHONG_CI.toString(), ((BigDecimal) dataList.get(0).get("well_times")).toString());
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_MAX_ZH.toString(), ((BigDecimal) dataList.get(0).get("well_maxload")).toString());
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_MIN_ZH.toString(), ((BigDecimal) dataList.get(0).get("well_minload")).toString());
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_GGGL.toString(), ((BigDecimal) dataList.get(0).get("well_rodpower")).toString());
                         realtimeDataService.putValue(code, RedisKeysEnum.BZ_GTMJ.toString(), ((BigDecimal) dataList.get(0).get("well_area")).toString());
-                        log.info(code + " 标准功图数据写入实时库！");
+                        log.info(code + newDateTime + " 标准功图数据写入实时库！");
                     }
                     myDateMap.put(code, newDateTime);
                 } catch (Exception e) {
@@ -462,11 +467,10 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         log.info("完成初始化标准功图任务：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
-    private void reportGtAlarm() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.MINUTE, cal.get(Calendar.MINUTE) - 1445);
-
+    @Override
+    public void reportGtAlarm(Calendar cal) {
+        log.info("开始检测威尔泰克功图报警：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        cal.set(Calendar.MINUTE, cal.get(Calendar.MINUTE) - 5);
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
             list = con.createQuery("select * from QYSCZH.SYX_BJ_BJXX where BJSJ>:BJSJ")
@@ -492,18 +496,15 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                             break;
                         }
                     }
-                    SoeRecord record = new SoeRecord(id, tagName, code, "gt_bj", bjxx, bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz, true, new Date(), null, null, date, 7, "开关井报警");
-
+                    SoeRecord record = new SoeRecord(id, tagName, code, "gt_bj", bjxx, bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz, true, new Date(), null, null, date, 5, "功图报警");
+                    log.info(code + " 发生功图报警！" + bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz);
                     realtimeDataService.publish(JSON.toJSONString(record));
                 } catch (Exception e) {
                     log.error(e.toString());
                 }
-
             }
-
-
         }
-
+        log.info("完成检测威尔泰克功图报警：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
     private void insertScsjData() {
@@ -542,5 +543,76 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             }
         }
         log.info("结束插入运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    @Override
+    public void netChecking() {
+        log.info("开始网络诊断：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        List<Map<String, Object>> list = null;
+        try (Connection con = sql2o.open()) {
+//            list = con.createQuery("select * from R_NETCHECKING where DEVICETYPE not like 'RTU' and DEVICETYPE not like '传%'")
+            list = con.createQuery("select * from R_NETCHECKING")
+                    .executeAndFetchTable().asList();
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+        if (list != null) {
+            for (Map<String, Object> map : list) {
+                try {
+                    String code = (String) map.get("relatedcode");
+                    String varName = (String) map.get("var_name");
+                    String ip = (String) map.get("ipaddress");
+                    boolean ok = false;
+                    if (ip != null && !"".equals(ip.trim())) {
+                        ok = isNetOk(ip);
+                    } else {
+                        continue;
+                    }
+                    int i = ok ? 1 : 0;
+
+                    String updateSql = "update R_NETCHECKING set status = :STATUS where relatedcode = :CODE ";
+                    try (Connection con = sql2o.open()) {
+                        con.createQuery(updateSql)
+                                .addParameter("CODE", code)
+                                .addParameter("STATUS", i)
+                                .executeUpdate();
+                    } catch (Exception e) {
+                        log.error(e.toString());
+                    }
+                    log.info(code + "——" + varName + "——" + ip + "：" + (ok?"通":"不通"));
+                } catch (Exception e) {
+                }
+            }
+        }
+        log.info("结束网络诊断：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    private boolean isNetOk(String ip) {
+        Runtime runtime = Runtime.getRuntime(); // 获取当前程序的运行进对象
+        Process process = null; // 声明处理类对象
+        String line = null; // 返回行信息
+        InputStream is = null; // 输入流
+        InputStreamReader isr = null; // 字节流
+        BufferedReader br = null;
+        boolean res = false;// 结果
+        try {
+            process = runtime.exec("ping " + ip); // PING
+            is = process.getInputStream(); // 实例化输入流
+            isr = new InputStreamReader(is);// 把输入流转换成字节流
+            br = new BufferedReader(isr);// 从字节中读取文本
+            while ((line = br.readLine()) != null) {
+                if (line.contains("TTL")) {
+                    res = true;
+                    break;
+                }
+            }
+            is.close();
+            isr.close();
+            br.close();
+        } catch (IOException e) {
+            System.out.println(e);
+            runtime.exit(1);
+        }
+        return res;
     }
 }

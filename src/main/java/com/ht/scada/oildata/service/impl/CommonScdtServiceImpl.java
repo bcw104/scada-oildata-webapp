@@ -77,6 +77,9 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 //    @Named("sql2o1")
 //    protected Sql2o sql2o1;
     private Map<String, String> myDateMap = new HashMap<>();
+    private int gtNum = Config.INSTANCE.getConfig().getInt("gt.num", 720);
+    
+    private List<String> alarmList = new ArrayList<>();
 
     public Sql2o getSql2o() {
         return sql2o;
@@ -180,7 +183,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
 //        insertScsjData();
 //        getBzgtDataFromWetk();
 //        reportGtAlarm(Calendar.getInstance());
-        netChecking();
+//        netChecking();
+//        deleteRtdbGTByNum();
         System.out.println("结束测试任务！");
     }
 
@@ -473,7 +477,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         cal.set(Calendar.MINUTE, cal.get(Calendar.MINUTE) - 5);
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
-            list = con.createQuery("select * from QYSCZH.SYX_BJ_BJXX where BJSJ>:BJSJ")
+            list = con.createQuery("select * from QYSCZH.SYX_BJ_BJXX where BGSJ>:BJSJ")
                     .addParameter("BJSJ", cal.getTime())
                     .executeAndFetchTable().asList();
         } catch (Exception e) {
@@ -497,8 +501,12 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                         }
                     }
                     SoeRecord record = new SoeRecord(id, tagName, code, "gt_bj", bjxx, bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz, true, new Date(), null, null, date, 5, "功图报警");
-                    log.info(code + " 发生功图报警！" + bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz);
-                    realtimeDataService.publish(JSON.toJSONString(record));
+                    String info = code + " 发生功图报警！" + bjxx + "越限报警；报警值：" + xx1 + "；阈值：" + yz;
+                    if(!alarmList.contains(info)) {
+                        log.info(info);
+                        realtimeDataService.publish(JSON.toJSONString(record));
+                        alarmList.add(info);
+                    }
                 } catch (Exception e) {
                     log.error(e.toString());
                 }
@@ -562,24 +570,30 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     String code = (String) map.get("relatedcode");
                     String varName = (String) map.get("var_name");
                     String ip = (String) map.get("ipaddress");
+                    String type = (String) map.get("devicetype");
                     boolean ok = false;
-                    if (ip != null && !"".equals(ip.trim())) {
+                    if (type.trim().startsWith("RTU") || type.trim().contains("传感器")) {
+                        String s = realtimeDataService.getEndTagVarInfo(code, varName);
+                        ok = (s != null && "true".equals(s)) ? true : false;
+                    } else if (ip != null && !"".equals(ip.trim())) {
                         ok = isNetOk(ip);
                     } else {
                         continue;
                     }
+
                     int i = ok ? 1 : 0;
 
-                    String updateSql = "update R_NETCHECKING set status = :STATUS where relatedcode = :CODE ";
+                    String updateSql = "update R_NETCHECKING set status = :STATUS where relatedcode = :CODE and var_name = :NAME";
                     try (Connection con = sql2o.open()) {
                         con.createQuery(updateSql)
                                 .addParameter("CODE", code)
+                                .addParameter("NAME", varName)
                                 .addParameter("STATUS", i)
                                 .executeUpdate();
                     } catch (Exception e) {
                         log.error(e.toString());
                     }
-                    log.info(code + "——" + varName + "——" + ip + "：" + (ok?"通":"不通"));
+                    log.info(code + "——" + varName + "——" + ip + "：" + (ok ? "通" : "不通"));
                 } catch (Exception e) {
                 }
             }
@@ -614,5 +628,50 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             runtime.exit(1);
         }
         return res;
+    }
+
+    /**
+     * 删除实时库历史功图
+     */
+    @Override
+    public void deleteRtdbGTByNum() {
+        log.info("开始清理实时功图数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
+            int i = 1;
+            for (EndTag youJing : Scheduler.youJingList) {
+                try {
+                    if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
+                        continue;
+                    }
+                    //删除示功图数据
+                    long num = realtimeDataService1.llen(youJing.getCode() + "_SGT_TIME");
+                    if (num > gtNum) {//删除功图
+                        List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", gtNum, -1);
+                        if (list != null) {
+                            for (String key : list) {
+                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_SGT");
+                            }
+                            realtimeDataService1.ltrim(youJing.getCode() + "_SGT_TIME", 0, gtNum - 1);
+                        }
+                    }
+                    //删除电功图数据
+                    long num1 = realtimeDataService1.llen(youJing.getCode() + "_DGT_TIME");
+                    if (num1 > gtNum) {//删除功图
+                        List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_DGT_TIME", gtNum, -1);
+                        if (list != null) {
+                            for (String key : list) {
+                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_DGT");
+                            }
+                            realtimeDataService1.ltrim(youJing.getCode() + "_DGT_TIME", 0, gtNum - 1);
+                        }
+                    }
+                    System.out.println(i + ":" + youJing.getCode() + " 功图数据删除" + (num-gtNum));
+                } catch (Exception e) {
+                    log.error(e.toString());
+                }
+                i++;
+            }
+        }
+        log.info("结束清理实时功图数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 }

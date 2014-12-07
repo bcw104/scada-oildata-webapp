@@ -12,4 +12,5 @@ public interface CommonScdtService {
     void getBzgtDataFromWetk();
     void reportGtAlarm(Calendar cal);
     void netChecking();
+    void deleteRtdbGTByNum();
 }

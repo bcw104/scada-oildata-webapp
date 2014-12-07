@@ -66,7 +66,7 @@ public class Scheduler {
 //        commonScdtService.wellClosedInfo();
 //        scslService.calcOilWellScsj();
 //        scslService.calcWaterWellScsj(Calendar.getInstance());
-        commonScdtService.test();
+//        commonScdtService.test();
 
     }
 
@@ -127,7 +127,7 @@ public class Scheduler {
     }
 
     /**
-     * 每隔一分钟任务
+     * 计算生产时间
      */
 //    @Scheduled(cron = "0 0/1 * * * ? ")
     private void minite1Task() {
@@ -138,14 +138,17 @@ public class Scheduler {
     }
 
     /**
-     * 每隔五分钟任务
+     * 写入配水阀组数据
      */
 //    @Scheduled(cron = "0 0/5 * * * ? ")
     private void minite5Task() {
         waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
     }
 
-//    @Scheduled(cron = "0 0/5 * * * ? ")
+    /**
+     * 威尔泰克功图报警
+     */
+    @Scheduled(cron = "0 0/5 * * * ? ")
     private void reportGtAlarmTask() {
         Calendar calendar = Calendar.getInstance();
         try {
@@ -154,7 +157,10 @@ public class Scheduler {
         }
     }
 
-//    @Scheduled(cron = "0 0/10 * * * ? ")
+    /**
+     * 获取标准功图
+     */
+    @Scheduled(cron = "0 0/10 * * * ? ")
     private void getBzgtDataFromWetk() {
         try {
             commonScdtService.getBzgtDataFromWetk();
@@ -162,7 +168,21 @@ public class Scheduler {
         }
     }
     
-    @Scheduled(cron = "0 0/10 * * * ? ")
+    /**
+     * 清理实时功图数据
+     */
+    @Scheduled(cron = "0 10 0 * * ? ")
+    private void deleteRtdbGTByNum() {
+        try {
+            commonScdtService.deleteRtdbGTByNum();
+        } catch (Exception e) {
+        }
+    }
+    
+    /**
+     * 网络诊断
+     */
+//    @Scheduled(cron = "0 0/10 * * * ? ")
     private void netChecking() {
         try {
             commonScdtService.netChecking();

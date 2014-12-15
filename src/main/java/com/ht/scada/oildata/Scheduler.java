@@ -6,7 +6,9 @@ import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
+import com.ht.scada.oildata.service.QkOilWellRecordService;
 import com.ht.scada.oildata.service.ScslService;
+import com.ht.scada.oildata.service.SlytGljService;
 import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
@@ -14,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import org.slf4j.Logger;
@@ -45,6 +46,11 @@ public class Scheduler {
     private ScslService scslService;
     @Autowired
     private EndTagService endTagService;
+    @Autowired
+    private QkOilWellRecordService qkOilWellRecordService;
+    @Autowired
+    private SlytGljService slytGljService;
+    
     public static List<EndTag> youJingList;
     public static List<EndTag> shuiJingList;
     public static List<String> youCodeList = new ArrayList<>();
@@ -66,8 +72,11 @@ public class Scheduler {
 //        commonScdtService.wellClosedInfo();
 //        scslService.calcOilWellScsj();
 //        scslService.calcWaterWellScsj(Calendar.getInstance());
+//        qkOilWellRecordService.runRiBaoTask();
+//        qkOilWellRecordService.runQjRiBaoTask();
+//        qkOilWellRecordService.runSjRiBaoTask();
 //        commonScdtService.test();
-
+          slytGljService.runSckhzbTask();
     }
 
     private void init() {
@@ -148,7 +157,7 @@ public class Scheduler {
     /**
      * 威尔泰克功图报警
      */
-    @Scheduled(cron = "0 0/5 * * * ? ")
+//    @Scheduled(cron = "0 0/5 * * * ? ")
     private void reportGtAlarmTask() {
         Calendar calendar = Calendar.getInstance();
         try {
@@ -160,7 +169,7 @@ public class Scheduler {
     /**
      * 获取标准功图
      */
-    @Scheduled(cron = "0 0/10 * * * ? ")
+//    @Scheduled(cron = "0 0/10 * * * ? ")
     private void getBzgtDataFromWetk() {
         try {
             commonScdtService.getBzgtDataFromWetk();
@@ -171,7 +180,7 @@ public class Scheduler {
     /**
      * 清理实时功图数据
      */
-    @Scheduled(cron = "0 10 0 * * ? ")
+//    @Scheduled(cron = "0 10 0 * * ? ")
     private void deleteRtdbGTByNum() {
         try {
             commonScdtService.deleteRtdbGTByNum();
@@ -189,4 +198,27 @@ public class Scheduler {
         } catch (Exception e) {
         }
     }
+    
+    
+    /*******************START 桥口定时任务****************************************/
+     /**
+     * 每天八点将报表数据写入数据库
+     */
+//    @Scheduled(cron = "0 12 8 * * ? ")
+    private void qkOilRiBaoTask() {
+        qkOilWellRecordService.runRiBaoTask();
+    }
+         /**
+     * 每天八点将报表数据写入数据库
+     */
+//    @Scheduled(cron = "0 15 8 * * ? ")
+    private void qkQiRiBaoTask() {
+        qkOilWellRecordService.runQjRiBaoTask();
+    }
+    
+//    @Scheduled(cron = "0 0 0/1 * * ? ")
+    private void qkSjTask() {
+        qkOilWellRecordService.runSjRiBaoTask();
+    }
+    /*******************END 桥口定时任务****************************************/
 }

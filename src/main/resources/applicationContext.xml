@@ -58,10 +58,10 @@
         <constructor-arg ref="dataSource"/>
         <constructor-arg ref="quirks"/>
     </bean>
-<!--    <bean id="sql2o1" class="org.sql2o.Sql2o" >
+    <bean id="sql2o1" class="org.sql2o.Sql2o" >
         <constructor-arg ref="dataSource1"/>
         <constructor-arg ref="quirks"/>
-    </bean>-->
+    </bean>
     
     <bean
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">

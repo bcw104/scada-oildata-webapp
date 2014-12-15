@@ -202,7 +202,7 @@ public class OilProductCalcServiceImpl implements OilProductCalcService {
                         //***************END 威尔泰克功图 ******************
 
                         //功图面积、光杆功率
-                        float calc[] = GTCalc.getGTCalcResult(weiyi, zaihe, chongCi);
+                        float calc[] = new GTCalc().getGTCalcResult(weiyi, zaihe, chongCi);
                         String gtmj = String.valueOf(calc[0]);
                         String glgl = String.valueOf(calc[1]);
                         realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), gtmj);

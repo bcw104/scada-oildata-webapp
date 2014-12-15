@@ -396,8 +396,10 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .executeUpdate();
                     } catch (Exception e) {
                         log.info("处理井：" + code + "出现异常！" + e.toString());
+                        continue;
                     }
                 } catch (Exception e) {
+                    
                 }
             }
         }
@@ -439,6 +441,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     //动液面、含水率写入实时库
                     realtimeDataService.putValue(code, RedisKeysEnum.DONG_YE_MIAIN.toString(), DYM == null ? "测不出" : String.valueOf(DYM));
                     realtimeDataService.putValue(code, RedisKeysEnum.HAN_SHUI_LV.toString(), HS == null ? "0" : String.valueOf(HS / 100));
+                    realtimeDataService.putValue(code, RedisKeysEnum.BENG_JING.toString(), BJ == null ? "0" : String.valueOf(BJ));
+                    realtimeDataService.putValue(code, RedisKeysEnum.BENG_SHEN.toString(), BS == null ? "0" : String.valueOf(BS));
 
                     //暂未存储
                     String ZAIHE = null, WEIYI = null;
@@ -692,6 +696,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     } catch (Exception e) {
                         log.info(code + "发生异常！");
                         e.printStackTrace();
+                        continue;
                     }
 
                     realtimeDataService.putValue(code, RedisKeysEnum.ZR_HDL.toString(), String.valueOf(HDL));  //昨日耗电量
@@ -705,6 +710,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 
                 } catch (Exception e) {
                     e.printStackTrace();
+                    continue;
                 }
                 log.info(youJing.getCode() + "日报计算结束！");
             }

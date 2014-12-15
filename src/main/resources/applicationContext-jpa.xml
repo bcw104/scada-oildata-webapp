@@ -76,20 +76,17 @@
     </bean>
     
     <!-- 数据源配置, 使用DBCP数据库连接池 -->
-<!--    <bean id="dataSource1" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
-         Connection Info 
+    <bean id="dataSource1" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
         <property name="driverClassName" value="${jdbc.driver}" />
-        <property name="url" value="jdbc:oracle:thin:@10.67.169.100:1521:ogtlogdb" />
-        <property name="username" value="guest" />
-        <property name="password" value="guest" />
+        <property name="url" value="jdbc:oracle:thin:@10.68.35.120:1521:orcl" />
+        <property name="username" value="shptzjk" />
+        <property name="password" value="shptzjk" />
 		
-         Connection Pooling Info 
         <property name="maxActive" value="${dbcp.maxActive}" />
         <property name="maxIdle" value="${dbcp.maxIdle}" />
         <property name="defaultAutoCommit" value="true" />
-         连接Idle一个小时后超时 
         <property name="timeBetweenEvictionRunsMillis" value="3600000" />
         <property name="minEvictableIdleTimeMillis" value="3600000" />
-    </bean>-->
+    </bean>
 
 </beans>

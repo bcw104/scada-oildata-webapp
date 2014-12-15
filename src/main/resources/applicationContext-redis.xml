@@ -27,14 +27,11 @@
     <!--<bean id="faultSerializer" class="com.ht.scada.data.redis.FaultRecordSerializer" />-->
     <!--<bean id="offLimitsSerializer" class="com.ht.scada.data.redis.OffLimitsRecordSerializer" />-->
 
-    <redis:listener-container connection-factory="connectionFactory">
-        <!-- the method attribute can be skipped as the default method name is "handleMessage" -->
-        <redis:listener ref="alarmListener" method="handleFaultMessage" topic="FaultChannel" />
-        <redis:listener ref="alarmListener" method="handleOffLimitsMessage" topic="OffLimitsChannel" />
-        <redis:listener ref="alarmListener" method="handleYxChangeMessage" topic="YxChangeChannel" />
+<!--    <redis:listener-container connection-factory="connectionFactory">
+        <redis:listener ref="alarmListener" method="sgtCalc" topic="SgtChannel" />
     </redis:listener-container>
 
-    <bean id="alarmListener" class="com.ht.scada.data.RealtimeDataMessageDelegate"/>
+    <bean id="alarmListener" class="com.ht.scada.oildata.service.impl.SgtCalcServiceImpl"/>-->
     
     <bean id="connectionFactory1"
           class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"

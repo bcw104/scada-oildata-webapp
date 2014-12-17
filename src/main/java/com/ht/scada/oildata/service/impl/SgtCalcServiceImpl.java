@@ -71,6 +71,9 @@ public class SgtCalcServiceImpl {
                     }
                     //判断功图是否正常
                     if (isSgtOk(code)) {
+                        Float CYL = null, YL = null, HS = null, PHL = null, DYM = null, SXGL = null, XXGL = null, SRGL = null, GGGL = null, SLGL = null, XTXL = null,
+                                GTMJ = null, BX = null, SXDL = null, XXDL = null, PJSZ = null, PJXZ = null, ZDCD = null;
+                        String ZDXX = null, ZDYJ = null;
                         float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), ",");
                         float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), ",");
                         float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
@@ -86,7 +89,7 @@ public class SgtCalcServiceImpl {
                             dl = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()), ",");
                         }
 
-                        Float hs = null, bj = null, bs = null, dym = null;
+                        Float hs = null, bj = null, bs = 0f;
                         String strHs = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.HAN_SHUI_LV.toString());
                         String strBj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BENG_JING.toString());
                         String strBs = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BENG_SHEN.toString());
@@ -101,40 +104,55 @@ public class SgtCalcServiceImpl {
                             bs = Float.valueOf(strBs);
                         }
                         if (strDym != null) {
-                            dym = Float.valueOf(strDym);
+                            DYM = Float.valueOf(strDym);
                         }
 
-                        float realHs = hs == null ? 0 : hs;
+                        HS = hs == null ? 0 : hs;
                         float realBj = bj == null ? 56f : bj;
 
 
                         GTDataComputerProcess gtData = new GTDataComputerProcess();
                         Map<GTReturnKeyEnum, Object> resultMap = null;
                         try {
-                            resultMap = gtData.calcSGTData(weiyi, zaihe, power, dl, chongCi, realBj, 1, realHs);
+                            resultMap = gtData.calcSGTData(weiyi, zaihe, power, dl, chongCi, realBj, 1, HS);
 
-                            String shCYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24);
-                            String ljCYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24 * CommonUtils.timeProportion(date));
-                            String ygCYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24);
+                            CYL = (Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24;
+                            YL = CYL * 24 * (1 - HS);
+                            SLGL = CYL * bs / 8640;
+
+                            String shCYL = String.valueOf(CYL);
+                            String ljCYL = String.valueOf(CYL * 24 * CommonUtils.timeProportion(date));
+                            String ygCYL = String.valueOf(CYL);
 
 //                            String shYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.OIL_PRODUCT) * 24);
 //                            String ljYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.OIL_PRODUCT) * 24 * CommonUtils.timeProportion(date));
 //                            String ygYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.OIL_PRODUCT) * 24);
 
-                            String shYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24 * (1 - realHs));
-                            String ljYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24 * (1 - realHs) * CommonUtils.timeProportion(date));
-                            String ygYL = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.LIQUID_PRODUCT) * 24 * (1 - realHs));
+                            String shYL = String.valueOf(YL);
+                            String ljYL = String.valueOf(YL * CommonUtils.timeProportion(date));
+                            String ygYL = String.valueOf(YL);
 
 //                            String nhShang = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_SHANG));
 //                            String nhXia = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.NENG_HAO_XIA));
 
-                            String glShang = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.GL_SHANG));
-                            String glXia = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.GL_XIA));
-                            String glAvg = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.GL_AVG));
-                            String phlGl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU));
+                            SXGL = (Float) resultMap.get(GTReturnKeyEnum.GL_SHANG);
+                            XXGL = (Float) resultMap.get(GTReturnKeyEnum.GL_XIA);
+                            SRGL = (Float) resultMap.get(GTReturnKeyEnum.GL_AVG);
+                            PHL = (Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU);
 
-                            String sxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_SHANG));
-                            String xxdl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.DL_XIA));
+                            if (SRGL != 0) {
+                                XTXL = SLGL / SRGL;
+                            }
+
+                            String glShang = String.valueOf(SXGL);
+                            String glXia = String.valueOf(XXGL);
+                            String phlGl = String.valueOf(PHL);
+
+                            SXDL = (Float) resultMap.get(GTReturnKeyEnum.DL_SHANG);
+                            XXDL = (Float) resultMap.get(GTReturnKeyEnum.DL_XIA);
+
+                            String sxdl = String.valueOf(SXDL);
+                            String xxdl = String.valueOf(XXDL);
                             String phdDl = String.valueOf((Float) resultMap.get(GTReturnKeyEnum.PING_HENG_DU_DL));
 
                             realtimeDataService.putValue(code, RedisKeysEnum.RI_SS_CYL.toString(), shCYL);
@@ -158,10 +176,15 @@ public class SgtCalcServiceImpl {
                             realtimeDataService.putValue(code, RedisKeysEnum.DL_XIA.toString(), xxdl);
                             realtimeDataService.putValue(code, RedisKeysEnum.PING_HENG_LV_DL.toString(), phdDl);
 
+                            ZDXX = (String) resultMap.get(GTReturnKeyEnum.FAULT_DIAGNOSE_INFO);
+
+                            realtimeDataService.putValue(code, RedisKeysEnum.FALUT_DIAGNOSE_INFO.toString(), ZDXX);
+
                             //泵效
                             Object bx = resultMap.get(GTReturnKeyEnum.BENG_XIAO);
                             if (bx != null) {
-                                realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), String.valueOf((Float) bx));
+                                BX = (Float) bx;
+                                realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), String.valueOf(BX));
                             }
 
                         } catch (Exception e) {
@@ -186,11 +209,15 @@ public class SgtCalcServiceImpl {
                         //***************END 威尔泰克功图 ******************
 
                         //功图面积、光杆功率
-                        float calc[] =new GTCalc().getGTCalcResult(weiyi, zaihe, chongCi);
-                        String gtmj = String.valueOf(calc[0]);
-                        String glgl = String.valueOf(calc[1]);
+                        float calc[] = new GTCalc().getGTCalcResult(weiyi, zaihe, chongCi);
+                        GTMJ = calc[0];
+                        GGGL = calc[1];
+                        String gtmj = String.valueOf(GTMJ);
+                        String glgl = String.valueOf(GGGL);
                         realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), gtmj);
                         realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), glgl);
+                        //写入到历史数据表
+                        updateHisSgtData(CYL, YL, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);
                     } else {//无功图
                         realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
                         realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), "0");
@@ -224,6 +251,41 @@ public class SgtCalcServiceImpl {
             return f1;
         } else {
             return 0;
+        }
+    }
+
+    private void updateHisSgtData(Float CYL, Float YL, Float HS, Float PHL, Float DYM, Float SXGL, Float XXGL, Float SRGL, Float GGGL, Float SLGL, Float XTXL,
+            Float GTMJ, Float BX, Float SXDL, Float XXDL, Float PJSZ, Float PJXZ, String ZDXX, Float ZDCD, String ZDYJ, String code, Date date) {
+        String sql = "update T_SGT_HISTORY set(CYL,YL,HS,PHL,DYM,SXGL,XXGL,SRGL,GGGL,SLGL,XTXL,GTMJ,BX,SXDL,XXDL,PJSZ,PJXZ,ZDXX,ZCCD,ZDYJ,JSSJ) "
+                + "values(:CYL,:YL,:HS,:PHL,:DYM,:SXGL,:XXGL,:SRGL,:GGGL,:SLGL,:XTXL,:GTMJ,:BX,:SXDL,:XXDL,:PJSZ,:PJXZ,:ZDXX,:ZCCD,:ZDYJ,:JSSJ) where code=:CODE and DATETIME=:DATE";
+        try (Connection con = sql2o.open()) {
+            con.createQuery(sql)
+                    .addParameter("CYL", CYL)
+                    .addParameter("YL", YL)
+                    .addParameter("HS", HS)
+                    .addParameter("PHL", PHL)
+                    .addParameter("DYM", DYM)
+                    .addParameter("SXGL", SXGL)
+                    .addParameter("XXGL", XXGL)
+                    .addParameter("SRGL", SRGL)
+                    .addParameter("XXGL", XXGL)
+                    .addParameter("GGGL", GGGL)
+                    .addParameter("SLGL", SLGL)
+                    .addParameter("XTXL", XTXL)
+                    .addParameter("GTMJ", GTMJ)
+                    .addParameter("BX", BX)
+                    .addParameter("SXDL", SXDL)
+                    .addParameter("XXDL", XXDL)
+                    .addParameter("PJSZ", PJSZ)
+                    .addParameter("PJXZ", PJXZ)
+                    .addParameter("ZDXX", ZDXX)
+                    .addParameter("ZDCD", ZDCD)
+                    .addParameter("ZDYJ", ZDYJ)
+                    .addParameter("JSSJ", new Date())
+                    .addParameter("CODE", code)
+                    .addParameter("DATE", date)
+                    .executeUpdate();
+        } catch (Exception e) {
         }
     }
 

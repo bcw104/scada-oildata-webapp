@@ -399,7 +399,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                         continue;
                     }
                 } catch (Exception e) {
-                    
+                    continue;
                 }
             }
         }
@@ -619,6 +619,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                                 .executeUpdate();
                     } catch (Exception e) {
                         e.printStackTrace();
+                        continue;
                     }
 
                     //零时电表读数(班报中已更新)

@@ -240,6 +240,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .executeUpdate();
                 } catch (Exception e) {
                     log.info("处理水井：" + code + "出现异常！" + e.toString());
+                    continue;
                 }
             }
             log.info("水井班报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
@@ -337,6 +338,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                             .executeUpdate();//
                 } catch (Exception e) {
                     log.info("处理水井：" + code + "出现异常！" + e.toString());
+                    continue;
                 }
 
                 String jzrSql = "Insert into QYSCZH.SZS_SRD_SJ "
@@ -359,6 +361,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 } catch (Exception e) {
                     log.info(code + "发生异常！");
                     e.printStackTrace();
+                    continue;
                 }
 
                 //清除班累积运算值
@@ -492,6 +495,7 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 } catch (Exception e) {
                     log.info(code + "发生异常！");
                     e.printStackTrace();
+                    continue;
                 }
             }
             log.info("配水阀组录入结束——现在时刻：" + CommonUtils.date2String(new Date()));

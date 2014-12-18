@@ -44,6 +44,10 @@ import org.sql2o.data.Row;
  */
 @Transactional
 @Service("oilProductCalcService")
+@Deprecated
+/**
+ * 用SgtCalcService监听实现
+ */
 public class OilProductCalcServiceImpl implements OilProductCalcService {
 
     private static final Logger log = LoggerFactory.getLogger(OilProductCalcServiceImpl.class);

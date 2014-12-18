@@ -8,10 +8,12 @@ import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
 import com.ht.scada.oildata.service.QkOilWellRecordService;
 import com.ht.scada.oildata.service.ScslService;
+import com.ht.scada.oildata.service.SgtAnalyzeService;
 import com.ht.scada.oildata.service.SlytGljService;
 import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
 import com.ht.scada.oildata.service.WetkSgtInsertService;
+import com.ht.scada.oildata.service.impl.SgtCalcService;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * 定时任务
@@ -30,8 +33,8 @@ import org.slf4j.LoggerFactory;
 public class Scheduler {
 
     private static final Logger log = LoggerFactory.getLogger(Scheduler.class);
-    @Autowired
-    private OilProductCalcService oilProductCalcService;    //产量计算
+//    @Autowired
+//    private OilProductCalcService oilProductCalcService;    //产量计算
     @Autowired
     private OilWellDataCalcService oilWellDataCalcService;  //油井日报班报
     @Autowired
@@ -50,6 +53,8 @@ public class Scheduler {
     private QkOilWellRecordService qkOilWellRecordService;
     @Autowired
     private SlytGljService slytGljService;
+    @Autowired
+    private SgtAnalyzeService sgtAnalyzeService;
     
     public static List<EndTag> youJingList;
     public static List<EndTag> shuiJingList;
@@ -76,7 +81,8 @@ public class Scheduler {
 //        qkOilWellRecordService.runQjRiBaoTask();
 //        qkOilWellRecordService.runSjRiBaoTask();
 //        commonScdtService.test();
-          slytGljService.runSckhzbTask();
+//          slytGljService.runSckhzbTask();
+//        sgtAnalyzeService.sgtAnalyze();
     }
 
     private void init() {
@@ -98,10 +104,18 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-//    @Scheduled(cron = "0 0/10 * * * ? ")
+    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
-        oilProductCalcService.oilProductCalcTask();   //功图分析计算
+//        oilProductCalcService.oilProductCalcTask();   //功图分析计算
+    }
+    /**
+     * 计算未监听到的示功图，后期程序稳定后删除该任务
+     */
+    
+    @Scheduled(cron = "0 25 0/1 * * ? ")
+    private void sgtCalc() {
+        sgtAnalyzeService.sgtAnalyze(); 
     }
 
     /**
@@ -221,4 +235,11 @@ public class Scheduler {
         qkOilWellRecordService.runSjRiBaoTask();
     }
     /*******************END 桥口定时任务****************************************/
+    
+    /*******************START 胜利油田局生产指标考核****************************************/
+//    @Scheduled(cron = "0 0 7 * * ? ")
+    private void sczbkhTask() {
+        slytGljService.runSckhzbTask();
+    }
+    /*******************START 胜利油田局生产指标考核****************************************/
 }

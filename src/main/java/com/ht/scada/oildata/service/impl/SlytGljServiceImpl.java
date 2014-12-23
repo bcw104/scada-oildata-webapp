@@ -6,6 +6,7 @@ package com.ht.scada.oildata.service.impl;
 
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.CommonUtils;
+import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.data.service.impl.HistoryDataServiceImpl2;
@@ -70,62 +71,96 @@ public class SlytGljServiceImpl implements SlytGljService {
         /**
          * *计算生产单元模块上线率********
          */
+        float scdyNum = 0; //实际上线的数量
+        float allNum = 0;  //应上线的数量
+
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
             list = con.createQuery("select * from T_END_TAG").executeAndFetchTable().asList();
         } catch (Exception e) {
-            e.printStackTrace();
         }
-        float youJingNum = 0; //油井数据
         if (list != null) {
-            float allNum = 0;
-            float onNum = 0;
+            scdyNum = 0;
             for (Map<String, Object> map : list) {
                 String type = (String) map.get("type");
                 String code = (String) map.get("code");
                 switch (type) {
                     case "YOU_JING":
                         allNum++;
+                        //有通讯井+措施关井+长停井
                         if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
-                            onNum++;
+                            scdyNum++;
+                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()) != null
+                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()))) {
+                            scdyNum++;
+                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()) != null
+                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()))) {
+                            scdyNum++;
                         }
                         break;
                     case "JI_LIANG_ZHAN":
                         allNum++;
                         if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
-                            onNum++;
+                            scdyNum++;
                         }
                         break;
                     case "PEI_SHUI_JIAN":
                         allNum++;
                         if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
-                            onNum++;
+                            scdyNum++;
                         }
+                        break;
+                    case "ZHU_SHUI_JING":
+                        allNum++;
+                        scdyNum++;
                         break;
                     default:
                         break;
                 }
             }
-            if (allNum > 0) {
-                MKSXL = onNum * 100 / allNum;
+        }
+        List<Map<String, Object>> spList = null;
+        try (Connection con = sql2o.open()) {
+            spList = con.createQuery("select RELATEDCODE,VAR_NAME from R_NETCHECKING where DEVICETYPE='摄像头'").executeAndFetchTable().asList();
+        } catch (Exception e) {
+        }
+        if (spList != null) {
+            allNum = allNum + spList.size();
+            int spOnNum = 0;
+            for (Map<String, Object> map : spList) {
+                String varName = (String) map.get("var_name");
+                String code = (String) map.get("relatedcode");
+                String status = realtimeDataService.getEndTagVarInfo(code, varName);
+                if (status != null && "true".equals(status)) {
+                    spOnNum++;
+                }
             }
+            scdyNum = scdyNum + spOnNum;
+            log.info("视频总数：{}", spList.size());
+            log.info("在线视频数：{}", spOnNum);
+        }
+
+        if (allNum > 0) {
+            MKSXL = scdyNum * 100 / allNum;
+            log.info("应上线生产单元模块总数：" + allNum);
+            log.info("实际上线的生产单元模块数：" + scdyNum);
+            log.info("模块上线率：" + MKSXL);
         }
 
         /**
          * *计算采集数据齐全率********
          */
         if (list != null) {
-            float allNum = 0;
+            float allQqNum = 0;
             float onNum = 0;
             for (Map<String, Object> map : list) {
                 String type = (String) map.get("type");
                 String subType = (String) map.get("sub_type");
                 String code = (String) map.get("code");
-                if ("YOU_JING".equals(type)) {
-                    youJingNum++;
-                    allNum = allNum + 4;
+                if ("YOU_JING".equals(type) && "true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
+                    allQqNum = allQqNum + 4;
                     if ("YOU_LIANG_SHI".equals(subType)) {
-                        allNum++;
+                        allQqNum++;
                         if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
                             onNum++;
                         }
@@ -144,8 +179,11 @@ public class SlytGljServiceImpl implements SlytGljService {
                     }
                 }
             }
-            if (allNum > 0) {
-                SJQQL = onNum * 100 / allNum;
+            if (allQqNum > 0) {
+                SJQQL = onNum * 100 / allQqNum;
+                log.info("应上线数据项：" + allQqNum);
+                log.info("实际上线的数据项：" + onNum);
+                log.info("数据齐全率：" + SJQQL);
             }
         }
 
@@ -172,8 +210,11 @@ public class SlytGljServiceImpl implements SlytGljService {
         }
         if (alarmList != null) {
             bjNum = alarmList.size();
-            if (youJingNum > 0) {
-                BJPC = bjNum / youJingNum;
+            if (scdyNum > 0) {
+                BJPC = bjNum / scdyNum;
+                log.info("阶段单元模块报警次数：" + bjNum);
+                log.info("阶段内单元模块数：" + scdyNum);
+                log.info("报警频次：" + BJPC);
             }
         }
 
@@ -206,6 +247,9 @@ public class SlytGljServiceImpl implements SlytGljService {
         }
         if (bjNum > 0) {
             CZJSL = jsbjNum * 100 / bjNum;
+            log.info("报警发生次数：" + bjNum);
+            log.info("处置及时的报警次数：" + jsbjNum);
+            log.info("报警处置及时率：" + CZJSL);
         }
 
         /**
@@ -262,6 +306,9 @@ public class SlytGljServiceImpl implements SlytGljService {
                 }
             }
             CZFHL = fhNum * 100 / czNum;
+            log.info("报警处置次数：" + czNum);
+            log.info("报警处置符合现场实际数：" + fhNum);
+            log.info("报警处置符合率：" + CZFHL);
         }
 
         Calendar calendar = Calendar.getInstance();

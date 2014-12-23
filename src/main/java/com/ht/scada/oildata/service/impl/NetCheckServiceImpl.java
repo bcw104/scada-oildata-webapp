@@ -74,12 +74,24 @@ public class NetCheckServiceImpl implements NetCheckService {
                         ok = (s != null && "true".equals(s)) ? true : false;
                     } else if (ip != null && !"".equals(ip.trim())) {
                         ok = isNetOk(ip);
+                        
+                        // 写入实时库 2014.12.24
+                        String value = ok ? "true" : "false";	// 获得实时库值的字符串
+                        if (type.trim().contains("摄像头")){
+                        	realtimeDataService.putValue(code, "sp_rj45_status", value );		
+                        } else {
+                        	realtimeDataService.putValue(code, "nrj45_status", value );	
+                        }
+                        
+                        
                     } else {
                         continue;
                     }
 
                     int i = ok ? 1 : 0;
-
+                    
+                    
+                    // 写入关系库
                     String updateSql = "update R_NETCHECKING set status = :STATUS where relatedcode = :CODE and var_name = :NAME";
                     try (Connection con = sql2o.open()) {
                         con.createQuery(updateSql)

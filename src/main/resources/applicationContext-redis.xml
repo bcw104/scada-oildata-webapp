@@ -27,10 +27,10 @@
     <!--<bean id="faultSerializer" class="com.ht.scada.data.redis.FaultRecordSerializer" />-->
     <!--<bean id="offLimitsSerializer" class="com.ht.scada.data.redis.OffLimitsRecordSerializer" />-->
 
-    <redis:listener-container connection-factory="connectionFactory">
+<!--    <redis:listener-container connection-factory="connectionFactory">
         <redis:listener ref="alarmListener" method="sgtCalc" topic="SgtChannel" />
     </redis:listener-container>
-    <bean id="alarmListener" class="com.ht.scada.oildata.service.impl.SgtCalcService"/>
+    <bean id="alarmListener" class="com.ht.scada.oildata.service.impl.SgtCalcService"/>-->
     
     <bean id="connectionFactory1"
           class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"

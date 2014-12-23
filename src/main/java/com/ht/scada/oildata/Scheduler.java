@@ -4,6 +4,7 @@ import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.oildata.service.CommonScdtService;
+import com.ht.scada.oildata.service.NetCheckingService;
 import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
 import com.ht.scada.oildata.service.QkOilWellRecordService;
@@ -45,6 +46,8 @@ public class Scheduler {
     private WellInfoInsertService wellInfoInsertService;    //油井信息录入
     @Autowired
     private CommonScdtService commonScdtService;
+    @Autowired
+    private NetCheckingService netCheckingService;
     @Autowired
     private ScslService scslService;
     @Autowired
@@ -113,7 +116,7 @@ public class Scheduler {
      * 计算未监听到的示功图，后期程序稳定后删除该任务
      */
     
-    @Scheduled(cron = "0 25 0/1 * * ? ")
+//    @Scheduled(cron = "0 25 0/1 * * ? ")
     private void sgtCalc() {
         sgtAnalyzeService.sgtAnalyze(); 
     }
@@ -208,7 +211,7 @@ public class Scheduler {
 //    @Scheduled(cron = "0 0/10 * * * ? ")
     private void netChecking() {
         try {
-            commonScdtService.netChecking();
+            netCheckingService.netChecking();
         } catch (Exception e) {
         }
     }
@@ -237,7 +240,7 @@ public class Scheduler {
     /*******************END 桥口定时任务****************************************/
     
     /*******************START 胜利油田局生产指标考核****************************************/
-//    @Scheduled(cron = "0 0 7 * * ? ")
+//    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
         slytGljService.runSckhzbTask();
     }

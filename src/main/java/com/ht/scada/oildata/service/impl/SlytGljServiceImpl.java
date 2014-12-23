@@ -152,17 +152,20 @@ public class SlytGljServiceImpl implements SlytGljService {
         /**
          * *计算单元模块报警频次********
          */
-        float bjNum = 0;
+        float bjNum = 0;    //报警次数
+        //昨天6:20到今天6:20的报警数目
         Calendar startTime = Calendar.getInstance();
-        startTime.set(Calendar.MINUTE, 0);
+        startTime.set(Calendar.MINUTE, 20);
         startTime.set(Calendar.SECOND, 0);
         startTime.set(Calendar.MILLISECOND, 0);
         startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(Calendar.MINUTE, 20);
         List<Map<String, Object>> alarmList = null;
         try (Connection con = sql2o.open()) {
-            // where A.ACTION_TIME >=:startTime
-            alarmList = con.createQuery("select * from T_ALARM_RECORD A where A.ACTION_TIME >=:startTime")
+            alarmList = con.createQuery("select * from T_ALARM_RECORD A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime")
                     .addParameter("startTime", startTime.getTime())
+                    .addParameter("endTime", endTime.getTime())
                     .executeAndFetchTable().asList();
         } catch (Exception e) {
             e.printStackTrace();
@@ -178,18 +181,19 @@ public class SlytGljServiceImpl implements SlytGljService {
          * *计算报警处置及时率********
          */
         float jsbjNum = 0;  //及时报警数
-        if (alarmList != null) {//一个小时内处置则为及时
+        if (alarmList != null) {
             for (Map<String, Object> map : alarmList) {
                 Integer ID = Integer.valueOf(((BigDecimal) map.get("id")).toString());
                 Date date = (Date) map.get("action_time");
                 Calendar c = Calendar.getInstance();
                 c.setTime(date);
-                c.set(Calendar.HOUR_OF_DAY, c.get(Calendar.HOUR_OF_DAY) + 1);
+                //报警发生30分钟内进行处置为及时处置
+                c.set(Calendar.MINUTE, c.get(Calendar.MINUTE) + 30);
                 try (Connection con = sql2o.open()) {
-//                    Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ID = :ID and HANDLE_TIME is not null and HANDLE_TIME >=:startTime and HANDLE_TIME <=:endTime ")
+                    //Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ID = :ID and HANDLE_TIME is not null and HANDLE_TIME >=:startTime and HANDLE_TIME <=:endTime ")
                     Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ALARMRECORD_ID = :ID and HANDLE_TIME is not null ")
-                            //                            .addParameter("startTime", date)
-                            //                            .addParameter("endTime", c.getTime())
+                            //.addParameter("startTime", date)
+                            //.addParameter("endTime", c.getTime())
                             .addParameter("ID", ID)
                             .executeScalar(Integer.class);
                     if (num != null && num > 0) {

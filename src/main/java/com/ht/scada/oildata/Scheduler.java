@@ -4,7 +4,7 @@ import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.oildata.service.CommonScdtService;
-import com.ht.scada.oildata.service.NetCheckingService;
+import com.ht.scada.oildata.service.NetCheckService;
 import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
 import com.ht.scada.oildata.service.QkOilWellRecordService;
@@ -47,7 +47,7 @@ public class Scheduler {
     @Autowired
     private CommonScdtService commonScdtService;
     @Autowired
-    private NetCheckingService netCheckingService;
+    private NetCheckService netCheckService;
     @Autowired
     private ScslService scslService;
     @Autowired
@@ -86,6 +86,7 @@ public class Scheduler {
 //        commonScdtService.test();
 //          slytGljService.runSckhzbTask();
 //        sgtAnalyzeService.sgtAnalyze();
+        netCheckService.netChecking();
     }
 
     private void init() {
@@ -107,7 +108,7 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-    @Scheduled(cron = "0 0/10 * * * ? ")
+//    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
 //        oilProductCalcService.oilProductCalcTask();   //功图分析计算
@@ -211,7 +212,7 @@ public class Scheduler {
 //    @Scheduled(cron = "0 0/10 * * * ? ")
     private void netChecking() {
         try {
-            netCheckingService.netChecking();
+//            netCheckingService.netChecking();
         } catch (Exception e) {
         }
     }

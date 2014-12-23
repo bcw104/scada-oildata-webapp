@@ -1,5 +1,5 @@
 package com.ht.scada.oildata.service;
 
-public interface NetCheckingService {
+public interface NetCheckService {
     void netChecking();
 }

@@ -6,14 +6,17 @@ package com.ht.scada.oildata.service.impl;
 
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.data.service.RealtimeDataService;
-import com.ht.scada.oildata.service.NetCheckingService;
+import com.ht.scada.oildata.service.NetCheckService;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
+
 import javax.inject.Inject;
+
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +31,10 @@ import org.sql2o.Sql2o;
  * @author 赵磊 2014-8-14 23:49:22
  */
 @Transactional
-@Service("netCheckingService")
-public class NetCheckingServiceImpl implements NetCheckingService {
+@Service("netCheckService")
+public class NetCheckServiceImpl implements NetCheckService {
 
-    private static final Logger log = LoggerFactory.getLogger(NetCheckingServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(NetCheckServiceImpl.class);
     @Autowired
     private EndTagService endTagService;
     @Autowired

@@ -28,6 +28,7 @@ import org.sql2o.Sql2o;
 
 /**
  * @author 赵磊 2014-12-15 19:04:22
+ * @author PengWang 2014-12-29 23:10:00
  */
 @Transactional
 @Service("slytGljService")
@@ -51,28 +52,28 @@ public class SlytGljServiceImpl implements SlytGljService {
         log.info("开始写入生产考核指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
 
         String GLQDM = "30202009";  //管理区代码 YS_DAB08@YDK
-        Float MKSXL = 90f; //生产单元模块上线率
-        Float SJBDL = null; //数据标定率
-        Float SJQQL = 90f; //采集数据齐全率
-        Float BJPC = 2f;  //单元模块报警频次
-        Float CZJSL = 90f;  //报警处置及时率
-        Float CZFHL = 90f; //报警处置符合率
-        Float YJSL = null;  //油井时率
-        Float YJTJL = null; //油井躺井率
-        Float PHHGL = null; //平衡合格率
-        Float ZSJSL = null; //注水井时率
-        Float PZWCL = null; //配注完成率
-        Float ZSBH = null;  //注水标耗
-        Float CYBH = null;  //采油标耗
-        Float ZRDJL = null; //自然递减率
-        Float GKHGL = null; //工况合格率
+        Float MKSXL = 90f; 			//生产单元模块上线率
+        Float SJBDL = null; 		//数据标定率
+        Float SJQQL = 90f; 			//采集数据齐全率
+        Float BJPC = 2f; 			//单元模块报警频次
+        Float CZJSL = 90f;  		//报警处置及时率
+        Float CZFHL = 90f; 			//报警处置符合率
+        Float YJSL = null;  		//油井时率
+        Float YJTJL = null; 		//油井躺井率
+        Float PHHGL = null; 		//平衡合格率
+        Float ZSJSL = null; 		//注水井时率
+        Float PZWCL = null; 		//配注完成率
+        Float ZSBH = null;  		//注水标耗
+        Float CYBH = null;  		//采油标耗
+        Float ZRDJL = null; 		//自然递减率
+        Float GKHGL = null; 		//工况合格率
         String GLQMC = "孤岛采油管理四区";
 
         /**
          * *计算生产单元模块上线率********
          */
-        float scdyNum = 0; //实际上线的数量
-        float allNum = 0;  //应上线的数量
+        float scdyNum = 0; 			//实际上线的数量
+        float allNum = 0;  			//应上线的数量
 
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
@@ -146,7 +147,8 @@ public class SlytGljServiceImpl implements SlytGljService {
             log.info("实际上线的生产单元模块数：" + scdyNum);
             log.info("模块上线率：" + MKSXL);
         }
-
+             
+        
         /**
          * *计算采集数据齐全率********
          */
@@ -197,22 +199,31 @@ public class SlytGljServiceImpl implements SlytGljService {
         startTime.set(Calendar.SECOND, 0);
         startTime.set(Calendar.MILLISECOND, 0);
         startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
+//        startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 6);
         Calendar endTime = Calendar.getInstance();
-        endTime.set(Calendar.MINUTE, 20);
-        List<Map<String, Object>> alarmList = null;
+        endTime.set(Calendar.MINUTE, 20);	
+        List<Map<String, Object>> alarmList = null;		//排除了开井报警的报警（目前现场未对开井报警进行处置，为了增加频次，顾在计算式让报警数往多了统计）
+        List<Map<String, Object>> alarmListALL = null; // 所有的报警
         try (Connection con = sql2o.open()) {
-            alarmList = con.createQuery("select * from T_ALARM_RECORD A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime")
+            alarmList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime and info <> '开井报警' ")
                     .addParameter("startTime", startTime.getTime())
                     .addParameter("endTime", endTime.getTime())
                     .executeAndFetchTable().asList();
+            
+            alarmListALL = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime ")
+                    .addParameter("startTime", startTime.getTime())
+                    .addParameter("endTime", endTime.getTime())
+                    .executeAndFetchTable().asList();
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if (alarmList != null) {
-            bjNum = alarmList.size();
+        if (alarmListALL != null) {
+            bjNum = alarmList.size();	// 不含开井报警的报警数
             if (scdyNum > 0) {
-                BJPC = bjNum / scdyNum;
-                log.info("阶段单元模块报警次数：" + bjNum);
+                BJPC = alarmListALL.size() / scdyNum;
+                log.info("阶段单元模块报警次数(不含开井)：" + bjNum);
+                log.info("阶段单元模块报警次数（总）：" + alarmListALL.size() );
                 log.info("阶段内单元模块数：" + scdyNum);
                 log.info("报警频次：" + BJPC);
             }
@@ -232,8 +243,9 @@ public class SlytGljServiceImpl implements SlytGljService {
                 c.set(Calendar.MINUTE, c.get(Calendar.MINUTE) + 30);
                 try (Connection con = sql2o.open()) {
                     //Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ID = :ID and HANDLE_TIME is not null and HANDLE_TIME >=:startTime and HANDLE_TIME <=:endTime ")
-                    Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ALARMRECORD_ID = :ID and HANDLE_TIME is not null ")
-                            //.addParameter("startTime", date)
+//                    Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ALARMRECORD_ID = :ID and HANDLE_TIME is not null ")
+                	  Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME is not null ")	// 落实时间不为空
+                			//.addParameter("startTime", date)
                             //.addParameter("endTime", c.getTime())
                             .addParameter("ID", ID)
                             .executeScalar(Integer.class);
@@ -255,11 +267,11 @@ public class SlytGljServiceImpl implements SlytGljService {
         /**
          * *计算报警处置符合率********
          */
-        float fhNum = 0;   //报警符合数
+        float fhNum = 0;   	//报警符合数
         float czNum = 0;    //报警处置数
         List<Map<String, Object>> handleAlarmList = null;
         try (Connection con = sql2o.open()) {
-            handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE A where A.HANDLE_TIME >=:startTime")
+            handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime")
                     .addParameter("startTime", startTime.getTime())
                     .executeAndFetchTable().asList();
         } catch (Exception e) {
@@ -268,11 +280,11 @@ public class SlytGljServiceImpl implements SlytGljService {
         if (handleAlarmList != null) {
             czNum = handleAlarmList.size();
             fhNum = czNum;
-            for (Map<String, Object> map : handleAlarmList) {//两个小时内不再出现为符合报警
+            for (Map<String, Object> map : handleAlarmList) {	//两个小时内不再出现为符合报警
                 Integer ID = Integer.valueOf(((BigDecimal) map.get("alarmrecord_id")).toString());
-                Date date = (Date) map.get("handle_time");
-                try (Connection con = sql2o.open()) {//在T_ALARM_RECORD里查询报警记录
-                    List<Map<String, Object>> mapList = con.createQuery("select * from T_ALARM_RECORD A where A.ID = :ID")
+                Date date = (Date) map.get("assign_time");
+                try (Connection con = sql2o.open()) {			//在T_ALARM_RECORD里查询报警记录
+                    List<Map<String, Object>> mapList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ID = :ID")
                             .addParameter("ID", ID)
                             .executeAndFetchTable().asList();
                     if (mapList != null) {
@@ -289,7 +301,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                         eTime.set(Calendar.HOUR_OF_DAY, eTime.get(Calendar.HOUR_OF_DAY) + 2);
 
                         try (Connection con1 = sql2o.open()) {
-                            Integer num = con1.createQuery("select count(*) from T_ALARM_RECORD A where A.VAR_NAME = :VAR_NAME and ENDTAG_ID=:ENDTAG_ID "
+                            Integer num = con1.createQuery("select count(*) from T_ALARM_RECORD2 A where A.VAR_NAME = :VAR_NAME and ENDTAG_ID=:ENDTAG_ID "
                                     + " and ACTION_TIME > :startTime and ACTION_TIME <=:endTime ")
                                     .addParameter("startTime", date2)
                                     .addParameter("endTime", eTime.getTime())
@@ -317,6 +329,10 @@ public class SlytGljServiceImpl implements SlytGljService {
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
 
+        System.out.println("报警频次为： " + BJPC);
+        System.out.println("报警处置及时率：" + CZJSL);
+        System.out.println("报警处置符合率" + CZFHL);
+        
         String sql = "insert into SHPT.SHPT_SCKHZB "
                 + "(GLQDM, RQ, MKSXL, SJBDL, SJQQL, BJPC, CZJSL, CZFHL, YJSL, YJTJL, PHHGL, ZSJSL, PZWCL, ZSBH, CYBH, ZRDJL, GKHGL, GLQMC) "
                 + "values (:GLQDM, :RQ, :MKSXL, :SJBDL, :SJQQL, :BJPC, :CZJSL, :CZFHL, :YJSL, :YJTJL, :PHHGL, :ZSJSL, :PZWCL, :ZSBH, :CYBH, :ZRDJL, :GKHGL, :GLQMC)";

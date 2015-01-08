@@ -77,7 +77,7 @@ public class SlytGljServiceImpl implements SlytGljService {
 
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
-            list = con.createQuery("select * from T_END_TAG").executeAndFetchTable().asList();
+            list = con.createQuery("select * from T_END_TAG where code <> 'GD1-19-815'").executeAndFetchTable().asList();
         } catch (Exception e) {
         }
         if (list != null) {
@@ -152,6 +152,36 @@ public class SlytGljServiceImpl implements SlytGljService {
         /**
          * *计算采集数据齐全率********
          */
+//        if (list != null) {
+//            float allQqNum = 0;
+//            float onNum = 0;
+//            for (Map<String, Object> map : list) {
+//                String type = (String) map.get("type");
+//                String subType = (String) map.get("sub_type");
+//                String code = (String) map.get("code");
+//                if ("YOU_JING".equals(type) && "true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
+//                    allQqNum = allQqNum + 4;
+//                    if ("YOU_LIANG_SHI".equals(subType)) {
+//                        allQqNum++;
+//                        if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
+//                            onNum++;
+//                        }
+//                    }
+//                    if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6"))) {//套压
+//                        onNum++;
+//                    }
+//                    if (getRealtimeData(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) > 0) {
+//                        onNum++;
+//                    }
+//                    if (getRealtimeData(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) > 0) {
+//                        onNum++;
+//                    }
+//                    if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15"))) {//智能电表
+//                        onNum++;
+//                    }
+//                }
+//            }
+        log.info( "（数据齐全率）下面打印缺失数据信息： " );
         if (list != null) {
             float allQqNum = 0;
             float onNum = 0;
@@ -160,25 +190,44 @@ public class SlytGljServiceImpl implements SlytGljService {
                 String subType = (String) map.get("sub_type");
                 String code = (String) map.get("code");
                 if ("YOU_JING".equals(type) && "true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
-                    allQqNum = allQqNum + 4;
-                    if ("YOU_LIANG_SHI".equals(subType)) {
-                        allQqNum++;
-                        if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
-                            onNum++;
+                	
+                	if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing"))) {	// 排除作业井、关井、长停井、措施关井，只留开井
+                		allQqNum = allQqNum + 4;
+                        if ("YOU_LIANG_SHI".equals(subType) || "GAO_YUAN_JI".equals(subType) ) {
+                            allQqNum++;
+                            if (getRealtimeDataNew(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > -10000) {
+                                onNum++;
+                            } else {
+                            	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 载荷为： " , getRealtimeDataNew(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) );
+                            }
                         }
-                    }
-                    if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6"))) {//套压
-                        onNum++;
-                    }
-                    if (getRealtimeData(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) > 0) {
-                        onNum++;
-                    }
-                    if (getRealtimeData(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) > 0) {
-                        onNum++;
-                    }
-                    if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15"))) {//智能电表
-                        onNum++;
-                    }
+//                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6"))) {//套压
+//                            onNum++;
+//                        }else {
+//                         	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 套压为： " , realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6") );
+//                        }
+                        if (getRealtimeDataNew(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()) >  -10000) {//套压
+                            onNum++;
+                        }else {
+                        	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 套压为： " , getRealtimeDataNew(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()) );
+                        }
+                        if (getRealtimeDataNew(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) >  -10000) {
+                            onNum++;
+                        }else {
+                        	log.info(code+ " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 井口温度为： " , getRealtimeDataNew(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) );
+                        }
+                        if (getRealtimeDataNew(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) >  -10000) {
+                            onNum++;
+                        } else {
+                        	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 回压为： " , getRealtimeDataNew(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) );
+                        }
+                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15"))) {//智能电表
+                            onNum++;
+                        } else {
+                        	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 智能电表为： " , realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15") );
+                        }
+                	}
+                    
                 }
             }
             if (allQqNum > 0) {
@@ -363,15 +412,16 @@ public class SlytGljServiceImpl implements SlytGljService {
         log.info("完成写入生产考核指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
-    private float getRealtimeData(String code, String varName) {
+    // 判断是否获取到了非空值，空用数字-10000代替
+    private float getRealtimeDataNew(String code, String varName) {
         String value = realtimeDataService.getEndTagVarInfo(code, varName);
-        if (value != null && !value.isEmpty()) {
+        if (value != null && !value.isEmpty()) {		// 非空即返回数据库中的真实值，不能返回0，有些值就是0
             double f = Double.parseDouble(value);
             BigDecimal bg = new BigDecimal(f);
             float f1 = bg.setScale(3, BigDecimal.ROUND_HALF_UP).floatValue();
             return f1;
         } else {
-            return 0;
+            return -10000;								// 没有值
         }
     }
 }

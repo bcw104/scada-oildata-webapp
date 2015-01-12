@@ -86,7 +86,7 @@ public class Scheduler {
 //        commonScdtService.test();
 //          slytGljService.runSckhzbTask();
 //        sgtAnalyzeService.sgtAnalyze();
-        netCheckService.netChecking();
+//        netCheckService.netChecking();
     }
 
     private void init() {
@@ -108,7 +108,7 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-//    @Scheduled(cron = "0 0/10 * * * ? ")
+    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
 //        oilProductCalcService.oilProductCalcTask();   //功图分析计算
@@ -117,7 +117,7 @@ public class Scheduler {
      * 计算未监听到的示功图，后期程序稳定后删除该任务
      */
     
-//    @Scheduled(cron = "0 25 0/1 * * ? ")
+    @Scheduled(cron = "0 25 0/1 * * ? ")
     private void sgtCalc() {
         sgtAnalyzeService.sgtAnalyze(); 
     }
@@ -212,7 +212,7 @@ public class Scheduler {
 //    @Scheduled(cron = "0 0/10 * * * ? ")
     private void netChecking() {
         try {
-//            netCheckingService.netChecking();
+            netCheckService.netChecking();
         } catch (Exception e) {
         }
     }
@@ -222,14 +222,14 @@ public class Scheduler {
      /**
      * 每天八点将报表数据写入数据库
      */
-//    @Scheduled(cron = "0 12 8 * * ? ")
+//    @Scheduled(cron = "0 30 5 * * ? ")
     private void qkOilRiBaoTask() {
         qkOilWellRecordService.runRiBaoTask();
     }
          /**
      * 每天八点将报表数据写入数据库
      */
-//    @Scheduled(cron = "0 15 8 * * ? ")
+//    @Scheduled(cron = "0 30 5 * * ? ")
     private void qkQiRiBaoTask() {
         qkOilWellRecordService.runQjRiBaoTask();
     }
@@ -243,7 +243,7 @@ public class Scheduler {
     /*******************START 胜利油田局生产指标考核****************************************/
 //    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
-        slytGljService.runSckhzbTask();
+//        slytGljService.runSckhzbTask();
     }
     /*******************START 胜利油田局生产指标考核****************************************/
 }

@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
@@ -66,7 +67,7 @@ public class SgtCalcService {
      * @param message
      */
     public void sgtCalc(final String message) {
-        executorService.execute(new Runnable() {
+        executorService.schedule(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -75,20 +76,18 @@ public class SgtCalcService {
                         log.info("忽略！");
                         return;
                     }
-                    Thread.sleep(10000);
                     String mes[] = message.split(",");
                     String code = mes[0];
-                    long time = Long.parseLong(mes[1]);
-                    Date date = new Date(time);
+                    String time = mes[1];
+                    Date date = sdf.parse(time);
                     String sgtTime = realtimeDataService.getEndTagVarYcArray(code, RedisKeysEnum.GT_DATETIME.toString());
                     //判断功图时间是否一致
-                    if (!sgtTime.equals(sdf.format(date))) {
+                    if (!sgtTime.equals(time)) {
                         log.info("时间不一致：" + sgtTime);
-                        log.info("时间不一致：" + sdf.format(date));
+                        log.info("时间不一致：" + time);
                         log.info("时间不一致：" + code);
                         return;
                     }
-
                     if (!isSgtOk(code)) {
                         log.info("错误功图：" + code);
                         realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
@@ -99,18 +98,16 @@ public class SgtCalcService {
                         return;
                     }
 
-                    String time1 = LocalDateTime.fromDateFields(date).toString("yyyy-MM-dd HH:mm:ss");
-
                     float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), ",");
                     float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), ",");
                     float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
-                    log.info("开始计算：" + code + " " + time1 + "  " + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-                    handleData(code, sdf.parse(time1), weiyi, zaihe, chongCi);
+                    log.info("开始计算：" + code + " " + time + "  " + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+                    handleData(code, date, weiyi, zaihe, chongCi);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-        });
+        }, 20, TimeUnit.SECONDS);
     }
 
     public void handleData(String code, Date date, float[] weiyi, float[] zaihe, float chongCi) {

@@ -90,22 +90,22 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     try {
                         if (SJD.equals("10:00")) {
                             String BAN_LJYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
-                            if (BAN_LJYXSJ != null && (Integer.valueOf(BAN_LJYXSJ)) > 0) {
+                            if (BAN_LJYXSJ != null && (Float.valueOf(BAN_LJYXSJ)) > 0) {
                                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
                             }
 
                             String BAN_LJCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
-                            if (BAN_LJCYL != null && (Integer.valueOf(BAN_LJCYL)) > 0) {
+                            if (BAN_LJCYL != null && (Float.valueOf(BAN_LJCYL)) > 0) {
                                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJCYL.toString(), "0");
                             }
 
                             String BAN_LJYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString());
-                            if (BAN_LJYL != null && (Integer.valueOf(BAN_LJYL)) > 0) {
+                            if (BAN_LJYL != null && (Float.valueOf(BAN_LJYL)) > 0) {
                                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYL.toString(), "0");
                             }
 
                             String BAN_LJHDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJHDL.toString());
-                            if (BAN_LJHDL != null && (Integer.valueOf(BAN_LJHDL)) > 0) {
+                            if (BAN_LJHDL != null && (Float.valueOf(BAN_LJHDL)) > 0) {
                                 realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJHDL.toString(), "0");
                             }
                         }
@@ -495,6 +495,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     endTime1.set(Calendar.SECOND, 0);
                     endTime1.set(Calendar.MILLISECOND, 0);
                     endTime1.set(Calendar.HOUR_OF_DAY, 0);
+                    endTime1.set(Calendar.DAY_OF_MONTH, 0);
                     try {
                         Map<String, Object> monthMap = getAvgMonthlyData(code, endTime1.getTime(), startTime1.getTime());
                         if (monthMap != null) {
@@ -506,18 +507,16 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
 
                     String rtYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
-                    String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
-                    String rtYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString());
+//                    String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
+//                    String rtYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYL.toString());
                     String rtHDL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJHDL.toString());
 
                     RLJYXSJ = rtYXSJ == null ? null : Float.valueOf(rtYXSJ);
 //                    CYL = rtCYL == null ? null : Float.valueOf(rtCYL);
-                    YL = rtYL == null ? null : Float.valueOf(rtYL);
+//                    YL = rtYL == null ? null : Float.valueOf(rtYL);
                     HDL = rtHDL == null ? 0f : Float.valueOf(rtHDL);
 
-                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), rtCYL == null ? "0" : rtCYL); //昨日产液量
-                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), rtYL == null ? "0" : rtYL);    //昨日产油量
-
+                    
                     Calendar c = Calendar.getInstance();
                     c.set(Calendar.MINUTE, 0);
                     c.set(Calendar.SECOND, 0);
@@ -548,6 +547,9 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
 
                     Float bdxs = (youJing.getBdxs() == null || youJing.getBdxs() <= 0) ? 1f : youJing.getBdxs();  //标定系数
+                    
+                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(CYL * bdxs)); //昨日产液量
+                    realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(CYL * bdxs * (1 - HS / 100)));    //昨日产油量
 
                     try (Connection con = sql2o.open()) {
                         con.createQuery(sql)

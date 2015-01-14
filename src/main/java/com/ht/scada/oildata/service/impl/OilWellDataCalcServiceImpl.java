@@ -461,7 +461,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 //                            PHL1 = Math.abs(XXDL) / Math.abs(SXDL);
 //                        }
                         //螺杆泵产液量
-                        CYL = dayMap.get("cyl") == null ? 0f : Float.parseFloat(((BigDecimal) dayMap.get("cyl")).toString());
+//                        CYL = dayMap.get("cyl") == null ? 0f : Float.parseFloat(((BigDecimal) dayMap.get("cyl")).toString());
                     }
 
                     if (youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) || youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
@@ -473,6 +473,9 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                             ZXZH = gtfxMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) gtfxMap.get("zxzh")).toString());
                             CYL = gtfxMap.get("rcyl1") == null ? 0f : Float.parseFloat(((BigDecimal) gtfxMap.get("rcyl1")).toString());
                         }
+                    } else {//螺杆泵液量采用班累积
+                        String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
+                        CYL = rtCYL == null ? 0f : Float.valueOf(rtCYL);
                     }
 
 

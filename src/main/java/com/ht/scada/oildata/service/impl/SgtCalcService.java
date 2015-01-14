@@ -15,6 +15,7 @@ import com.ht.scada.oildata.calc.GTReturnKeyEnum;
 import com.ht.scada.oildata.model.GTSC;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
 import java.math.BigDecimal;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import javax.inject.Inject;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
@@ -229,9 +231,20 @@ public class SgtCalcService {
         startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 2);
         //取两个小时内最新的功图
         GTSC gtsc = findOneGTFXRecordByCode(code, startTime.getTime());
+        float wetkCyl = 0;
+        float wetkYl = 0;
         if (gtsc != null) {
-            float wetkCyl = gtsc.getRCYL1();
-            float wetkYl = gtsc.getRCYL();
+            wetkCyl = gtsc.getRCYL1();
+//            wetkYl = gtsc.getRCYL();
+            wetkYl = wetkCyl * (1-HS);
+            //更新威尔泰克功图算产
+            Date cjsj = null;
+            try {
+                cjsj = sdf.parse(gtsc.getCJSJ());
+            } catch (ParseException ex) {
+                java.util.logging.Logger.getLogger(SgtCalcService.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            updateSgtHistoryByCode(code, cjsj, wetkCyl, wetkYl);
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), String.valueOf(wetkCyl));
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), String.valueOf(wetkYl));
         } else {//两个小时内无数据
@@ -252,7 +265,7 @@ public class SgtCalcService {
 
 
         //写入到历史数据表
-        updateHisSgtData(CYL, YL, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);
+        updateHisSgtData(wetkCyl, wetkYl, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);
     }
 
     private boolean isSgtOk(String code) {
@@ -326,6 +339,29 @@ public class SgtCalcService {
         try (Connection con = sql2o.open()) {
             org.sql2o.Query query = con.createQuery(sql).addParameter("CODE", code).addParameter("DATE", date);
             return query.executeAndFetchFirst(GTSC.class);
+        }
+    }
+    
+    /**
+     * 根据威尔泰克产液量值更新
+     * @param code
+     * @param date
+     * @param CYL
+     * @param YL 
+     */
+    private void updateSgtHistoryByCode(String code, Date date, Float CYL, Float YL) {
+        if(date == null) {
+            return;
+        }
+        String sql = "update T_SGT_HISTORY set CYL = :CYL ,YL = :YL "
+                    + "where CODE=:CODE and DATETIME=:DATETIME ";
+        try (Connection con = sql2o.open()) {
+            con.createQuery(sql)
+                    .addParameter("CODE", code)
+                    .addParameter("DATETIME", date)
+                    .addParameter("CYL", CYL)
+                    .addParameter("YL", YL)
+                    .executeUpdate();
         }
     }
 }

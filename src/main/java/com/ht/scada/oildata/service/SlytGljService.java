@@ -13,4 +13,9 @@ public interface SlytGljService {
      * 生产考核指标
      */
     void runSckhzbTask();
+    
+    /**
+     * 四化运维考核
+     */
+    void shywkh() ;
 }

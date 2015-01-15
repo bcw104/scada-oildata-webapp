@@ -140,6 +140,7 @@ public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    continue;
                 }
             }
         }

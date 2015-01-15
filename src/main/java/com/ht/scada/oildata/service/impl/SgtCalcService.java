@@ -15,12 +15,15 @@ import com.ht.scada.oildata.calc.GTReturnKeyEnum;
 import com.ht.scada.oildata.model.GTSC;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
 import java.math.BigDecimal;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import javax.inject.Inject;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
@@ -66,7 +69,7 @@ public class SgtCalcService {
      * @param message
      */
     public void sgtCalc(final String message) {
-        executorService.execute(new Runnable() {
+        executorService.schedule(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -75,20 +78,18 @@ public class SgtCalcService {
                         log.info("忽略！");
                         return;
                     }
-                    Thread.sleep(10000);
                     String mes[] = message.split(",");
                     String code = mes[0];
-                    long time = Long.parseLong(mes[1]);
-                    Date date = new Date(time);
+                    String time = mes[1];
+                    Date date = sdf.parse(time);
                     String sgtTime = realtimeDataService.getEndTagVarYcArray(code, RedisKeysEnum.GT_DATETIME.toString());
                     //判断功图时间是否一致
-                    if (!sgtTime.equals(sdf.format(date))) {
+                    if (!sgtTime.equals(time)) {
                         log.info("时间不一致：" + sgtTime);
-                        log.info("时间不一致：" + sdf.format(date));
+                        log.info("时间不一致：" + time);
                         log.info("时间不一致：" + code);
                         return;
                     }
-
                     if (!isSgtOk(code)) {
                         log.info("错误功图：" + code);
                         realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
@@ -99,18 +100,16 @@ public class SgtCalcService {
                         return;
                     }
 
-                    String time1 = LocalDateTime.fromDateFields(date).toString("yyyy-MM-dd HH:mm:ss");
-
                     float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), ",");
                     float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), ",");
                     float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
-                    log.info("开始计算：" + code + " " + time1 + "  " + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-                    handleData(code, sdf.parse(time1), weiyi, zaihe, chongCi);
+                    log.info("开始计算：" + code + " " + time + "  " + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+                    handleData(code, date, weiyi, zaihe, chongCi);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-        });
+        }, 20, TimeUnit.SECONDS);
     }
 
     public void handleData(String code, Date date, float[] weiyi, float[] zaihe, float chongCi) {
@@ -232,9 +231,20 @@ public class SgtCalcService {
         startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) - 2);
         //取两个小时内最新的功图
         GTSC gtsc = findOneGTFXRecordByCode(code, startTime.getTime());
+        float wetkCyl = 0;
+        float wetkYl = 0;
         if (gtsc != null) {
-            float wetkCyl = gtsc.getRCYL1();
-            float wetkYl = gtsc.getRCYL();
+            wetkCyl = gtsc.getRCYL1();
+//            wetkYl = gtsc.getRCYL();
+            wetkYl = wetkCyl * (1-HS);
+            //更新威尔泰克功图算产
+            Date cjsj = null;
+            try {
+                cjsj = sdf.parse(gtsc.getCJSJ());
+            } catch (ParseException ex) {
+                java.util.logging.Logger.getLogger(SgtCalcService.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            updateSgtHistoryByCode(code, cjsj, wetkCyl, wetkYl);
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), String.valueOf(wetkCyl));
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), String.valueOf(wetkYl));
         } else {//两个小时内无数据
@@ -255,7 +265,7 @@ public class SgtCalcService {
 
 
         //写入到历史数据表
-        updateHisSgtData(CYL, YL, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);
+        updateHisSgtData(wetkCyl, wetkYl, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);
     }
 
     private boolean isSgtOk(String code) {
@@ -329,6 +339,29 @@ public class SgtCalcService {
         try (Connection con = sql2o.open()) {
             org.sql2o.Query query = con.createQuery(sql).addParameter("CODE", code).addParameter("DATE", date);
             return query.executeAndFetchFirst(GTSC.class);
+        }
+    }
+    
+    /**
+     * 根据威尔泰克产液量值更新
+     * @param code
+     * @param date
+     * @param CYL
+     * @param YL 
+     */
+    private void updateSgtHistoryByCode(String code, Date date, Float CYL, Float YL) {
+        if(date == null) {
+            return;
+        }
+        String sql = "update T_SGT_HISTORY set CYL = :CYL ,YL = :YL "
+                    + "where CODE=:CODE and DATETIME=:DATETIME ";
+        try (Connection con = sql2o.open()) {
+            con.createQuery(sql)
+                    .addParameter("CODE", code)
+                    .addParameter("DATETIME", date)
+                    .addParameter("CYL", CYL)
+                    .addParameter("YL", YL)
+                    .executeUpdate();
         }
     }
 }

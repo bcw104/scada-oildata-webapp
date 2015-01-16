@@ -225,6 +225,15 @@ public class SgtCalcService {
         } catch (Exception e) {
             log.info(code + "功图分析出现异常：" + e.toString());
         }
+        
+        //功图面积、光杆功率
+        float calc[] = new GTCalc().getGTCalcResult(weiyi, zaihe, chongCi);
+        GTMJ = calc[0];
+        GGGL = calc[1];
+        String gtmj = String.valueOf(GTMJ);
+        String glgl = String.valueOf(GGGL);
+        realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), gtmj);
+        realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), glgl);
 
         //***************START 威尔泰克功图 ******************
         Calendar startTime = Calendar.getInstance();
@@ -253,16 +262,6 @@ public class SgtCalcService {
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), "0");
         }
         //***************END 威尔泰克功图 ******************
-
-        //功图面积、光杆功率
-        float calc[] = new GTCalc().getGTCalcResult(weiyi, zaihe, chongCi);
-        GTMJ = calc[0];
-        GGGL = calc[1];
-        String gtmj = String.valueOf(GTMJ);
-        String glgl = String.valueOf(GGGL);
-        realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), gtmj);
-        realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), glgl);
-
 
         //写入到历史数据表
         updateHisSgtData(wetkCyl, wetkYl, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);

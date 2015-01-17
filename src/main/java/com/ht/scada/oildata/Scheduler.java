@@ -109,7 +109,7 @@ public class Scheduler {
     /**
      * 每隔10分钟定时任务
      */
-    @Scheduled(cron = "0 0/10 * * * ? ")
+//    @Scheduled(cron = "0 0/10 * * * ? ")
     private void hourly10Task() {
         wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
 //        oilProductCalcService.oilProductCalcTask();   //功图分析计算
@@ -118,7 +118,7 @@ public class Scheduler {
      * 计算未监听到的示功图，后期程序稳定后删除该任务
      */
     
-    @Scheduled(cron = "0 25 0/1 * * ? ")
+//    @Scheduled(cron = "0 25 0/1 * * ? ")
     private void sgtCalc() {
         sgtAnalyzeService.sgtAnalyze(); 
     }
@@ -157,8 +157,9 @@ public class Scheduler {
     /**
      * 计算生产时间
      */
-//    @Scheduled(cron = "0 0/1 * * * ? ")
+    @Scheduled(cron = "0 0/1 * * * ? ")
     private void minite1Task() {
+        commonScdtService.insertScsjData();
         Calendar c = Calendar.getInstance();
         scslService.calcOilWellScsj(c);
         scslService.calcWaterWellScsj(c);
@@ -244,7 +245,7 @@ public class Scheduler {
     /*******************START 胜利油田局生产指标考核****************************************/
 //    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
-//        slytGljService.runSckhzbTask();
+        slytGljService.runSckhzbTask();
     }
 //    @Scheduled(cron = "0 0/15 * * * ? ")
     private void  shywkhTask(){					// 运维考核日报

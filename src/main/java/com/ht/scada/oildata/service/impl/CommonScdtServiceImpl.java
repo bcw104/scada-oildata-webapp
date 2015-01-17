@@ -515,8 +515,9 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         log.info("完成检测威尔泰克功图报警：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
-    private void insertScsjData() {
-        log.info("开始插入运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+    @Override
+    public void insertScsjData() {
+        log.info("开始初始化运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
         if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
             String sql = "Insert into T_Oil_Well_Calc_Data"
                     + "(ID, CODE, MINITE, IS_ON, LRSJ) "
@@ -550,7 +551,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                 log.info("写入完毕：" + code);
             }
         }
-        log.info("结束插入运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        log.info("结束初始化运行时间数据：" + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
     }
 
     /**

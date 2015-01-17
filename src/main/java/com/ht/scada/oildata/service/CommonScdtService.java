@@ -13,4 +13,5 @@ public interface CommonScdtService {
     void reportGtAlarm(Calendar cal);
 //    void netChecking();
     void deleteRtdbGTByNum();
+    void insertScsjData();
 }

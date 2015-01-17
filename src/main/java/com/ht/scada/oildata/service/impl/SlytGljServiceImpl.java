@@ -566,12 +566,14 @@ public class SlytGljServiceImpl implements SlytGljService {
         List<Map<String, Object>> handleAlarmList = null;				// 处置报警数
         List<Map<String, Object>> handleCompletedAlarmList = null;		// 处置完成报警数
         try (Connection con = sql2o.open()) {
-            handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime and A.ASSIGN_TIME<=:endTime")
+//            handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime and A.ASSIGN_TIME<=:endTime")
+            handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD where alarmrecord_id in ( select id from T_ALARM_RECORD2 A where A.ACTION_TIME between :startTime and :endTime and info <> '开井报警') ")
                     .addParameter("startTime", startTime.getTime())
                     .addParameter("endTime", endTime.getTime())
                     .executeAndFetchTable().asList();
             
-            handleCompletedAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime and A.ASSIGN_TIME<=:endTime and A.is_complete = 1 ")
+//            handleCompletedAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime and A.ASSIGN_TIME<=:endTime and A.is_complete = 1 ")
+            handleCompletedAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD where alarmrecord_id in (select id from T_ALARM_RECORD2 A where A.ACTION_TIME between :startTime and :endTime) and is_complete = 1 ")
                     .addParameter("startTime", startTime.getTime())
                     .addParameter("endTime", endTime.getTime())
                     .executeAndFetchTable().asList();

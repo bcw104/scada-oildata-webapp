@@ -157,7 +157,7 @@ public class Scheduler {
     /**
      * 计算生产时间
      */
-    @Scheduled(cron = "0 0/1 * * * ? ")
+//    @Scheduled(cron = "0 0/1 * * * ? ")
     private void minite1Task() {
         commonScdtService.insertScsjData();
         Calendar c = Calendar.getInstance();
@@ -243,11 +243,11 @@ public class Scheduler {
     /*******************END 桥口定时任务****************************************/
     
     /*******************START 胜利油田局生产指标考核****************************************/
-//    @Scheduled(cron = "0 50 6 * * ? ")
+    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
         slytGljService.runSckhzbTask();
     }
-//    @Scheduled(cron = "0 0/15 * * * ? ")
+    @Scheduled(cron = "0 0/15 * * * ? ")
     private void  shywkhTask(){					// 运维考核日报
     	 slytGljService.shywkh();
     }

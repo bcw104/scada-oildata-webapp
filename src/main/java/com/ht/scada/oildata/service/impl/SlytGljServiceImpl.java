@@ -257,7 +257,7 @@ public class SlytGljServiceImpl implements SlytGljService {
         List<Map<String, Object>> alarmList = null;		//排除了开井报警的报警（目前现场未对开井报警进行处置，为了增加频次，顾在计算式让报警数往多了统计）
         List<Map<String, Object>> alarmListALL = null; // 所有的报警
         try (Connection con = sql2o.open()) {
-            alarmList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime and A.alarm_level>4 and info <> '开井报警' ")
+            alarmList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime and A.alarm_level>4 and info <> '开井报警' and A.ENDTAG_ID in (select T.ID from T_END_TAG T where T.TYPE='YOU_JING')")
                     .addParameter("startTime", startTime.getTime())
                     .addParameter("endTime", endTime.getTime())
                     .executeAndFetchTable().asList();

@@ -757,29 +757,24 @@ public class SlytGljServiceImpl implements SlytGljService {
                  + "values (:SFQDM, :RQ, :RBJS, :RBJCZS, :RYJS, :RYJCZS, :KJS, :TXGZS, :YJSL, :PHDX, :PHDZC, :PHSD, :GJS, :ZJS, :SFQMC, :CFBJ, :CQWCZW, :BJCZCS, :QTJS)";
     	String sqlUpdate = "update SHPT.SHPT_SFQYWSJ set RQ = :RQ2, RBJS = :RBJS, RBJCZS = :RBJCZS, RYJS = :RYJS ,  RYJCZS = :RYJCZS , KJS = :KJS,"
     			+ "TXGZS = :TXGZS, YJSL = :YJSL, PHDX = :PHDX, PHDZC = :PHDZC , PHSD = :PHSD, GJS = :GJS, ZJS = :ZJS, SFQMC = :SFQMC, "
-    			+ "CFBJ = :CFBJ , CQWCZW = :CQWCZW, BJCZCS = :BJCZCS , QTJS = :QTJS where SFQDM = :SFQDM and RQ >:RQ";
+    			+ "CFBJ = :CFBJ , CQWCZW = :CQWCZW, BJCZCS = :BJCZCS , QTJS = :QTJS where SFQDM = :SFQDM and RQ >= :RQ";
     	String runStr = sqlInsert;									// 将要执行的串
     	
-    	Date todayBegin= new Date();								// 获得今日起始时间
-    	todayBegin.setHours(0);
-    	todayBegin.setMinutes(0);
-    	todayBegin.setSeconds(0);
-    	Date currentTime = new Date();								// 当前时间
+    	Date todayBegin = CommonUtils.getTodayZeroHour();			// 获取当天零时，如 2014-08-24 00:00:00， 不能用date获取，该类型变量无毫秒级设置，锁定不住时间
     	
     	List<Map<String, Object>> currentRecordToday = null;		// 处置了的报警
     	try (Connection con = sql2o1.open()) {
          	currentRecordToday = con.createQuery(sqlSearch)
          			.addParameter("SFQDM", SFQDM) 					// 管理区代码
-         			.addParameter("RQ", todayBegin) 				// 日期
+         			.addParameter("RQ", todayBegin)					// 日期
                     .executeAndFetchTable().asList();
-         	
          	
          	if (currentRecordToday != null && currentRecordToday.size() != 0) {			// 已有当天的记录
         		runStr = sqlUpdate;
-        		currentTime = todayBegin;
         		log.info("更新当前记录，更新时间： " + new Date());
         		log.info("原先时间为： " + currentRecordToday.get(0).get("rq") );
-        		
+        		log.info("当前共存在今日记录： " + currentRecordToday.size() + " 条！");
+        	
         		con.createQuery(runStr)
            	      .addParameter("SFQDM", SFQDM) 		// 管理区代码
            	      .addParameter("RQ2", new Date() )		// 更新时间
@@ -806,11 +801,11 @@ public class SlytGljServiceImpl implements SlytGljService {
          	} else {																	// 还没有当天的记录
          		
         		runStr = sqlInsert;
-        		log.info("插入新记录，插入时间： " + new Date());
+        		log.info("插入新记录，插入时间： " + todayBegin );
         		
         		con.createQuery(runStr)
              	  .addParameter("SFQDM", SFQDM) 		// 管理区代码
-                  .addParameter("RQ", new Date()) 		// 日期
+                  .addParameter("RQ", todayBegin) 		// 日期，当日起始时间
                   .addParameter("RBJS", RBJS) 			// 日报警数
                   .addParameter("RBJCZS", RBJCZS)		// 日报警处置数
                   .addParameter("RYJS", RYJS) 			// 日预警数

@@ -88,5 +88,19 @@
         <property name="timeBetweenEvictionRunsMillis" value="3600000" />
         <property name="minEvictableIdleTimeMillis" value="3600000" />
     </bean>
+    
+    <!-- 数据转储连接池 -->
+    <bean id="dataSource2" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${dr.driver}" />
+        <property name="url" value="${dr.url}" />
+        <property name="username" value="${dr.username}" />
+        <property name="password" value="${dr.password}" />
+		
+        <property name="maxActive" value="${dbcp.maxActive}" />
+        <property name="maxIdle" value="${dbcp.maxIdle}" />
+        <property name="defaultAutoCommit" value="true" />
+        <property name="timeBetweenEvictionRunsMillis" value="3600000" />
+        <property name="minEvictableIdleTimeMillis" value="3600000" />
+    </bean>
 
 </beans>

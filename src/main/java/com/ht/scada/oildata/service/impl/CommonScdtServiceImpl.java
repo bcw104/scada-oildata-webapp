@@ -65,8 +65,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     private EndTagService endTagService;
     @Autowired
     private RealtimeDataService realtimeDataService;
-    @Autowired
-    private RealtimeDataService1 realtimeDataService1;
+//    @Autowired
+//    private RealtimeDataService1 realtimeDataService1;
     @Autowired
     private RealtimeDataService2 realtimeDataService2;
     @Autowired
@@ -279,16 +279,16 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     if (!youJing.getSubType().equals(EndTagSubTypeEnum.YOU_LIANG_SHI.toString()) && !youJing.getSubType().equals(EndTagSubTypeEnum.GAO_YUAN_JI.toString())) {
                         continue;
                     }
-                    List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", 0, -1);
-                    if (list != null) {
-                        for (String key : list) {
-                            if (new Date(Long.parseLong(key)).before(endCal.getTime())) {
-                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_SGT");
-                                realtimeDataService1.remListValue(youJing.getCode() + "_SGT_TIME", 0, key);
-                                System.out.println("删除 " + youJing.getCode() + " " + df.format(new Date(Long.parseLong(key))) + " 功图！");
-                            }
-                        }
-                    }
+//                    List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", 0, -1);
+//                    if (list != null) {
+//                        for (String key : list) {
+//                            if (new Date(Long.parseLong(key)).before(endCal.getTime())) {
+//                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_SGT");
+//                                realtimeDataService1.remListValue(youJing.getCode() + "_SGT_TIME", 0, key);
+//                                System.out.println("删除 " + youJing.getCode() + " " + df.format(new Date(Long.parseLong(key))) + " 功图！");
+//                            }
+//                        }
+//                    }
                     System.out.println(i + ":" + youJing.getCode() + " 功图数据删除完毕！");
                 } catch (Exception e) {
                     log.error(e.toString());
@@ -568,28 +568,28 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                         continue;
                     }
                     //删除示功图数据
-                    long num = realtimeDataService1.llen(youJing.getCode() + "_SGT_TIME");
-                    if (num > gtNum) {//删除功图
-                        List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", gtNum, -1);
-                        if (list != null) {
-                            for (String key : list) {
-                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_SGT");
-                            }
-                            realtimeDataService1.ltrim(youJing.getCode() + "_SGT_TIME", 0, gtNum - 1);
-                        }
-                    }
-                    //删除电功图数据
-                    long num1 = realtimeDataService1.llen(youJing.getCode() + "_DGT_TIME");
-                    if (num1 > gtNum) {//删除功图
-                        List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_DGT_TIME", gtNum, -1);
-                        if (list != null) {
-                            for (String key : list) {
-                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_DGT");
-                            }
-                            realtimeDataService1.ltrim(youJing.getCode() + "_DGT_TIME", 0, gtNum - 1);
-                        }
-                    }
-                    System.out.println(i + ":" + youJing.getCode() + " 功图数据删除" + (num-gtNum));
+//                    long num = realtimeDataService1.llen(youJing.getCode() + "_SGT_TIME");
+//                    if (num > gtNum) {//删除功图
+//                        List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_SGT_TIME", gtNum, -1);
+//                        if (list != null) {
+//                            for (String key : list) {
+//                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_SGT");
+//                            }
+//                            realtimeDataService1.ltrim(youJing.getCode() + "_SGT_TIME", 0, gtNum - 1);
+//                        }
+//                    }
+//                    //删除电功图数据
+//                    long num1 = realtimeDataService1.llen(youJing.getCode() + "_DGT_TIME");
+//                    if (num1 > gtNum) {//删除功图
+//                        List<String> list = realtimeDataService1.lrange(youJing.getCode() + "_DGT_TIME", gtNum, -1);
+//                        if (list != null) {
+//                            for (String key : list) {
+//                                realtimeDataService1.delValue(youJing.getCode() + "_" + key + "_DGT");
+//                            }
+//                            realtimeDataService1.ltrim(youJing.getCode() + "_DGT_TIME", 0, gtNum - 1);
+//                        }
+//                    }
+//                    System.out.println(i + ":" + youJing.getCode() + " 功图数据删除" + (num-gtNum));
                 } catch (Exception e) {
                     log.error(e.toString());
                 }

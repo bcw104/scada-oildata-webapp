@@ -5,6 +5,7 @@
 package com.ht.scada.oildata;
 
 import com.google.common.base.Joiner;
+import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.Config;
 import com.ht.scada.data.service.RealtimeDataService;
 import java.math.BigDecimal;
@@ -32,6 +33,7 @@ import org.sql2o.Sql2o;
  */
 @Component
 public class DataRouter {
+
     private static final Logger log = LoggerFactory.getLogger(DataRouter.class);
     @Inject
     @Named("sql2o2")
@@ -68,7 +70,7 @@ public class DataRouter {
                     Integer delay = ((BigDecimal) map.get("delay")).intValue();
                     final String tableName = (String) map.get("tablename");
                     final Integer isUpdate = ((BigDecimal) map.get("isupdate")).intValue();
-                    final String updateKey = ((String) map.get("updatekey")).toLowerCase();
+                    final String updateKey = ((String) map.get("updatekey")) == null ? null : ((String) map.get("updatekey")).toLowerCase();
                     TimeUnit tu;
                     switch (timeUnit) {
                         case "second":
@@ -93,7 +95,11 @@ public class DataRouter {
                             String zdmc = (String) fieldMap.get("zdmc");
                             fields.add(zdmc);
                         }
-                        createTable(tableName, fieldList);//初始化数据库
+                        try {
+                            createTable(tableName, fieldList);//初始化数据库
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                         if (recordList != null) {//记录非空
                             final String insertSql = generateInsertSql(tableName, fields);
                             final String updateSql = generateUpdateSql(tableName, fields, updateKey);
@@ -165,15 +171,23 @@ public class DataRouter {
         for (Map<String, Object> map : recordList) {
             String jh = (String) map.get("jlmc");
             String code = (String) map.get("ysjlmc");
+            String tsjlmc = (String) map.get("tsjlmc"); //a,b,c
             for (Map<String, Object> fieldMap : fieldList) {
                 String zdmc = (String) fieldMap.get("zdmc");
                 String tscl = (String) fieldMap.get("tscl");
                 String gjz = (String) fieldMap.get("gjz");
+                String tsgjz = (String) fieldMap.get("tsgjz");  //i_c-1
+                if(tsjlmc != null && !"".equals(tsjlmc) && tsgjz != null && !"".equals(tsgjz)) {
+                    String gjzs[] = tsgjz.split("-");   
+                    gjz = gjzs[0];
+                    int codeIndex = Integer.parseInt(gjzs[1]);
+                    code = tsjlmc.split(",")[codeIndex-1];
+                }
                 String myTscl = tscl == null ? "" : tscl.toLowerCase();
                 switch (myTscl) {
                     case "":
                         String value = null;
-                        if(gjz != null && !"".equals(gjz.trim())) {
+                        if (gjz != null && !"".equals(gjz.trim())) {
                             value = realtimeDataService.getEndTagVarInfo(code, gjz);
                         }
                         query.addParameter(zdmc, value);
@@ -184,8 +198,36 @@ public class DataRouter {
                     case "jh":
                         query.addParameter(zdmc, jh);
                         break;
+                    case "yjyxzt":
+                        String zt = null;
+                        String s1=realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.RTU_RJ45_STATUS.toString().toLowerCase());
+                        if("true".equals(s1)) {
+                            String s2=realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.YOU_JING_YUN_XING.toString().toLowerCase());
+                            if("true".equals(s2)) {
+                                zt="1";
+                            } else {
+                                zt="0";
+                            }
+                        }
+                        query.addParameter(zdmc, zt);
+                        break;
+                    case "null":
+                        query.addParameter(zdmc, (String) null);
+                        break;
+                    case "yx":
+                        String yx = null;
+                        if (gjz != null && !"".equals(gjz.trim())) {
+                            String v = realtimeDataService.getEndTagVarInfo(code, gjz);
+                            if("true".equals(v)) {
+                                yx="1";
+                            } else if("false".equals(v)) {
+                                yx="0";
+                            }
+                        }
+                        query.addParameter(zdmc, yx);
+                        break;
                     default:
-                        query.addParameter(zdmc, (String)null);
+                        query.addParameter(zdmc, (String) null);
                         break;
                 }
             }

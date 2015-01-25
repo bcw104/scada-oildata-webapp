@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.ht.scada.oildata;
+package com.ht.scada.oildata.dr;
 
 import com.google.common.base.Joiner;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
@@ -89,6 +89,12 @@ public class DataRouter {
                     final List<Map<String, Object>> recordList = con.createQuery("select * from D_TASK_RECORD where RWMC=:RWMC")
                             .addParameter("RWMC", taskName)
                             .executeAndFetchTable().asList();
+                    if("油井设备档案实时数据".equals(taskName.trim())) {
+                        YouJingSbdazc yjsbzc = new YouJingSbdazc(con2, recordList, realtimeDataService);
+                        executorService.scheduleAtFixedRate(yjsbzc, delay, interval, tu);
+                        continue;
+                    }
+                    
                     final List<String> fields = new ArrayList<>();
                     if (fieldList != null) {//字段非空
                         for (Map<String, Object> fieldMap : fieldList) {
@@ -105,7 +111,6 @@ public class DataRouter {
                             final String updateSql = generateUpdateSql(tableName, fields, updateKey);
                             executorService.scheduleAtFixedRate(new Runnable() {
                                 int hasUpdate = isUpdate;
-
                                 @Override
                                 public void run() {
                                     log.info("执行——{}——任务", taskName);
@@ -177,11 +182,11 @@ public class DataRouter {
                 String tscl = (String) fieldMap.get("tscl");
                 String gjz = (String) fieldMap.get("gjz");
                 String tsgjz = (String) fieldMap.get("tsgjz");  //i_c-1
-                if(tsjlmc != null && !"".equals(tsjlmc) && tsgjz != null && !"".equals(tsgjz)) {
-                    String gjzs[] = tsgjz.split("-");   
+                if (tsjlmc != null && !"".equals(tsjlmc) && tsgjz != null && !"".equals(tsgjz)) {
+                    String gjzs[] = tsgjz.split("-");
                     gjz = gjzs[0];
                     int codeIndex = Integer.parseInt(gjzs[1]);
-                    code = tsjlmc.split(",")[codeIndex-1];
+                    code = tsjlmc.split(",")[codeIndex - 1];
                 }
                 String myTscl = tscl == null ? "" : tscl.toLowerCase();
                 switch (myTscl) {
@@ -192,21 +197,21 @@ public class DataRouter {
                         }
                         query.addParameter(zdmc, value);
                         break;
-                    case "cjsj":
+                    case "cjsj":    //采集时间
                         query.addParameter(zdmc, date);
                         break;
-                    case "jh":
+                    case "jh":      //井号
                         query.addParameter(zdmc, jh);
                         break;
-                    case "yjyxzt":
+                    case "yjyxzt":  //油井运行状态
                         String zt = null;
-                        String s1=realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.RTU_RJ45_STATUS.toString().toLowerCase());
-                        if("true".equals(s1)) {
-                            String s2=realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.YOU_JING_YUN_XING.toString().toLowerCase());
-                            if("true".equals(s2)) {
-                                zt="1";
+                        String s1 = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.RTU_RJ45_STATUS.toString().toLowerCase());
+                        if ("true".equals(s1)) {
+                            String s2 = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.YOU_JING_YUN_XING.toString().toLowerCase());
+                            if ("true".equals(s2)) {
+                                zt = "1";
                             } else {
-                                zt="0";
+                                zt = "0";
                             }
                         }
                         query.addParameter(zdmc, zt);
@@ -218,14 +223,30 @@ public class DataRouter {
                         String yx = null;
                         if (gjz != null && !"".equals(gjz.trim())) {
                             String v = realtimeDataService.getEndTagVarInfo(code, gjz);
-                            if("true".equals(v)) {
-                                yx="1";
-                            } else if("false".equals(v)) {
-                                yx="0";
+                            if ("true".equals(v)) {
+                                yx = "1";
+                            } else if ("false".equals(v)) {
+                                yx = "0";
                             }
                         }
                         query.addParameter(zdmc, yx);
                         break;
+                    case "snzt_g":  //使能状态（高位）
+                        break;
+                    case "snzt_d":  //使能状态（低位）
+                        break;
+                    case "zxzt_g":  //在线状态（高位）
+                        break;
+                    case "zxzt_d":  //在线状态（低位）
+                        break;
+//                    case "jh_yb" :  //井号（设备档案）
+//                        jh = jh.split("\\|")[0];
+//                        query.addParameter(zdmc, jh);
+//                        break;
+//                    case "yblx" :   //仪表类型
+//                        String yblx = jh.split("\\|")[1];
+//                        query.addParameter(zdmc, yblx);
+//                        break;
                     default:
                         query.addParameter(zdmc, (String) null);
                         break;

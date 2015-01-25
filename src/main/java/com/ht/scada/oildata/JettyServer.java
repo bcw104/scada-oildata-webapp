@@ -1,5 +1,6 @@
 package com.ht.scada.oildata;
 
+import com.ht.scada.data.Config;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
@@ -14,8 +15,9 @@ public class JettyServer {
     private static final Logger log = LoggerFactory.getLogger(JettyServer.class);
     public static void main(String[] args) throws Exception {
 //        log.info("启动Web");
+        int webPort = Config.INSTANCE.getConfig().getInt("web.port", 9527);
 
-        Server server = new Server(9677);
+        Server server = new Server(webPort);
 
         WebAppContext context = new WebAppContext("webapp", "/");
         //context.setDescriptor("webapp/WEB-INF/web.xml");

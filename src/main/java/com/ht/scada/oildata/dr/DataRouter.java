@@ -70,6 +70,7 @@ public class DataRouter {
                     Integer delay = ((BigDecimal) map.get("delay")).intValue();
                     final String tableName = (String) map.get("tablename");
                     final Integer isUpdate = ((BigDecimal) map.get("isupdate")).intValue();
+                    final Integer isCreateTalbe = ((BigDecimal) map.get("iscreate")).intValue();
                     final String updateKey = ((String) map.get("updatekey")) == null ? null : ((String) map.get("updatekey")).toLowerCase();
                     TimeUnit tu;
                     switch (timeUnit) {
@@ -89,12 +90,12 @@ public class DataRouter {
                     final List<Map<String, Object>> recordList = con.createQuery("select * from D_TASK_RECORD where RWMC=:RWMC")
                             .addParameter("RWMC", taskName)
                             .executeAndFetchTable().asList();
-                    if("油井设备档案实时数据".equals(taskName.trim())) {
+                    if ("油井设备档案实时数据".equals(taskName.trim())) {
                         YouJingSbdazc yjsbzc = new YouJingSbdazc(con2, recordList, realtimeDataService);
                         executorService.scheduleAtFixedRate(yjsbzc, delay, interval, tu);
                         continue;
                     }
-                    
+
                     final List<String> fields = new ArrayList<>();
                     if (fieldList != null) {//字段非空
                         for (Map<String, Object> fieldMap : fieldList) {
@@ -102,7 +103,9 @@ public class DataRouter {
                             fields.add(zdmc);
                         }
                         try {
-                            createTable(tableName, fieldList);//初始化数据库
+                            if(isCreateTalbe>0) {
+                                createTable(tableName, fieldList);//初始化数据库
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -111,6 +114,7 @@ public class DataRouter {
                             final String updateSql = generateUpdateSql(tableName, fields, updateKey);
                             executorService.scheduleAtFixedRate(new Runnable() {
                                 int hasUpdate = isUpdate;
+
                                 @Override
                                 public void run() {
                                     log.info("执行——{}——任务", taskName);
@@ -232,21 +236,17 @@ public class DataRouter {
                         query.addParameter(zdmc, yx);
                         break;
                     case "snzt_g":  //使能状态（高位）
+                        query.addParameter(zdmc, getSnztG(code));
                         break;
                     case "snzt_d":  //使能状态（低位）
+                        query.addParameter(zdmc, getSnztD(code));
                         break;
                     case "zxzt_g":  //在线状态（高位）
+                        query.addParameter(zdmc, getZxztG(code));
                         break;
                     case "zxzt_d":  //在线状态（低位）
+                        query.addParameter(zdmc, getZxztD(code));
                         break;
-//                    case "jh_yb" :  //井号（设备档案）
-//                        jh = jh.split("\\|")[0];
-//                        query.addParameter(zdmc, jh);
-//                        break;
-//                    case "yblx" :   //仪表类型
-//                        String yblx = jh.split("\\|")[1];
-//                        query.addParameter(zdmc, yblx);
-//                        break;
                     default:
                         query.addParameter(zdmc, (String) null);
                         break;
@@ -354,5 +354,52 @@ public class DataRouter {
                 e.printStackTrace();
             }
         }
+    }
+
+    private String getSnztG(String code) {
+        String s16 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wyyth_shi_neng_cgq16")) ? "1" : "0"; //一体化温压变
+        String s15 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_shi_neng_cgq15")) ? "1" : "0"; //智能电表
+        String s14 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "bpq_shi_neng_cgq14")) ? "1" : "0"; //变频器
+        String s13 = "0"; //掺稀配水阀使能
+        String s12 = "0"; //水套液位使能
+        String s11 = "0"; //加热炉油温使能
+        String s10 = "0"; //烟囱温度使能
+        String s9 = "0";  //储罐液位仪使能
+        return s16 + s15 + s14 + s13 + s12 + s11 + s10 + s9;
+    }
+
+    private String getSnztD(String code) {
+        String s8 = "0"; //汇管温度使能
+        String s7 = "0"; //汇管压力使能
+        String s6 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_shi_neng_cgq6")) ? "1" : "0"; //套压使能
+        String s5 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yw_shi_neng_cgq5")) ? "1" : "0"; //油温使能
+        String s4 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yy_shi_neng_cgq4")) ? "1" : "0"; //油压使能
+        String s3 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wy_shi_neng_cgq3")) ? "1" : "0"; //位移使能
+        String s2 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zh_shi_neng_cgq2")) ? "1" : "0"; //载荷使能
+        String s1 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yth_shi_neng_cgq1")) ? "1" : "0"; //一体化载荷位移使能
+        return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
+    }
+    private String getZxztG(String code) {
+        String s16 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wyyth_zai_xian_cgq16")) ? "1" : "0"; //一体化温压变
+        String s15 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15")) ? "1" : "0"; //智能电表
+        String s14 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "bpq_zai_xian_cgq14")) ? "1" : "0"; //变频器
+        String s13 = "0"; //掺稀配水阀
+        String s12 = "0"; //水套液位
+        String s11 = "0"; //加热炉油温
+        String s10 = "0"; //烟囱温度
+        String s9 = "0";  //储罐液位仪
+        return s16 + s15 + s14 + s13 + s12 + s11 + s10 + s9;
+    }
+
+    private String getZxztD(String code) {
+        String s8 = "0"; //汇管温度
+        String s7 = "0"; //汇管压力
+        String s6 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6")) ? "1" : "0"; //套压
+        String s5 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yw_zai_xian_cgq5")) ? "1" : "0"; //油温
+        String s4 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yy_zai_xian_cgq4")) ? "1" : "0"; //油压
+        String s3 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wy_zai_xian_cgq3")) ? "1" : "0"; //位移
+        String s2 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zh_zai_xian_cgq2")) ? "1" : "0"; //载荷
+        String s1 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yth_zai_xian_cgq1")) ? "1" : "0"; //一体化载荷位移
+        return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
     }
 }

@@ -103,7 +103,7 @@ public class DataRouter {
                             fields.add(zdmc);
                         }
                         try {
-                            if(isCreateTalbe>0) {
+                            if (isCreateTalbe > 0) {
                                 createTable(tableName, fieldList);//初始化数据库
                             }
                         } catch (Exception e) {
@@ -180,17 +180,21 @@ public class DataRouter {
         for (Map<String, Object> map : recordList) {
             String jh = (String) map.get("jlmc");
             String code = (String) map.get("ysjlmc");
-            String tsjlmc = (String) map.get("tsjlmc"); //a,b,c
+            String tsjlmc = (String) map.get("tsjlmc"); //WD|GD1-Q1|hgwd,YL|GD1-G2|hgyl2
             for (Map<String, Object> fieldMap : fieldList) {
                 String zdmc = (String) fieldMap.get("zdmc");
                 String tscl = (String) fieldMap.get("tscl");
                 String gjz = (String) fieldMap.get("gjz");
-                String tsgjz = (String) fieldMap.get("tsgjz");  //i_c-1
-                if (tsjlmc != null && !"".equals(tsjlmc) && tsgjz != null && !"".equals(tsgjz)) {
-                    String gjzs[] = tsgjz.split("-");
-                    gjz = gjzs[0];
-                    int codeIndex = Integer.parseInt(gjzs[1]);
-                    code = tsjlmc.split(",")[codeIndex - 1];
+                if (tsjlmc != null && !"".equals(tsjlmc)) {
+                    String mcs[] = tsjlmc.split(",");
+                    for (String s : mcs) {
+                        String gjzs[] = s.split("\\|");
+                        if (zdmc.equals(gjzs[0])) {
+                            code = gjzs[1];
+                            gjz = gjzs[2];
+                            break;
+                        }
+                    }
                 }
                 String myTscl = tscl == null ? "" : tscl.toLowerCase();
                 switch (myTscl) {
@@ -248,7 +252,7 @@ public class DataRouter {
                         query.addParameter(zdmc, getZxztD(code));
                         break;
                     default:
-                        query.addParameter(zdmc, (String) null);
+                        query.addParameter(zdmc, myTscl);
                         break;
                 }
             }
@@ -379,6 +383,7 @@ public class DataRouter {
         String s1 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yth_shi_neng_cgq1")) ? "1" : "0"; //一体化载荷位移使能
         return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
     }
+
     private String getZxztG(String code) {
         String s16 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wyyth_zai_xian_cgq16")) ? "1" : "0"; //一体化温压变
         String s15 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15")) ? "1" : "0"; //智能电表

@@ -18,6 +18,9 @@ import com.ht.scada.oildata.service.impl.SgtCalcService;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -63,7 +66,8 @@ public class Scheduler {
     public static List<EndTag> shuiJingList;
     public static List<String> youCodeList = new ArrayList<>();
     
-
+   
+    
     /**
      * 测试你的方法，启动时运行
      */
@@ -89,6 +93,8 @@ public class Scheduler {
 //        sgtAnalyzeService.sgtAnalyze();
 //        netCheckService.netChecking();
     }
+    
+
 
     private void init() {
         youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -243,11 +249,11 @@ public class Scheduler {
     /*******************END 桥口定时任务****************************************/
     
     /*******************START 胜利油田局生产指标考核****************************************/
-    @Scheduled(cron = "0 50 6 * * ? ")
+//    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
         slytGljService.runSckhzbTask();
     }
-    @Scheduled(cron = "0 0/15 * * * ? ")
+//    @Scheduled(cron = "0 0/15 * * * ? ")
     private void  shywkhTask(){					// 运维考核日报
     	 slytGljService.shywkh();
     }

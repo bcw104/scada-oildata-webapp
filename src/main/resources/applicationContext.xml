@@ -62,6 +62,10 @@
         <constructor-arg ref="dataSource1"/>
         <constructor-arg ref="quirks"/>
     </bean>
+    <bean id="sql2o2" class="org.sql2o.Sql2o" >
+        <constructor-arg ref="dataSource2"/>
+        <constructor-arg ref="quirks"/>
+    </bean>
     
     <bean
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
@@ -77,6 +81,7 @@
     </bean>
 
     <!-- 启动运行 -->
-    <bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="testYourMathod"/>
+    <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="testYourMathod"/>-->
+    <bean id="scheduler" class="com.ht.scada.oildata.dr.DataRouter" init-method="dataRouter"/>
     <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler"/>-->
 </beans>

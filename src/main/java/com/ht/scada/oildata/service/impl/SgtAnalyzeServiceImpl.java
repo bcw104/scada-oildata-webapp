@@ -4,6 +4,7 @@
  */
 package com.ht.scada.oildata.service.impl;
 
+import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.oildata.webapp.entity.WellInfoWrapper;
 import com.ht.scada.oildata.service.SgtAnalyzeService;
@@ -69,7 +70,7 @@ public class SgtAnalyzeServiceImpl implements SgtAnalyzeService {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                if(dataList == null) {
+                if (dataList == null) {
                     continue;
                 }
 
@@ -85,7 +86,9 @@ public class SgtAnalyzeServiceImpl implements SgtAnalyzeService {
                     SgtCalcService scs = new SgtCalcService();
                     scs.setRealtimeDataService(realtimeDataService);
                     scs.setSql2o(sql2o);
-                    scs.handleData(code, sdf.parse(time), parseStringToFloatArray(weiyi), parseStringToFloatArray(zaihe), chongCi);
+                    String powerStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase());
+                    String dlStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase());
+                    scs.handleData(code, sdf.parse(time), parseStringToFloatArray(weiyi), parseStringToFloatArray(zaihe), chongCi, powerStr, dlStr);
                 } catch (Exception e) {
                     log.error(e.getMessage());
                     continue;

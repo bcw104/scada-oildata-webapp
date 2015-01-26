@@ -36,11 +36,6 @@ public class ScslServiceImpl implements ScslService {
     private RealtimeDataService realtimeDataService;
     @Inject
     protected Sql2o sql2o;
-
-    public Sql2o getSql2o() {
-        return sql2o;
-    }
-
     public void setSql2o(Sql2o sql2o) {
         this.sql2o = sql2o;
     }

@@ -4,15 +4,21 @@
  */
 package com.ht.scada.oildata.service.impl;
 
+import com.ht.scada.common.tag.entity.EndTag;
+import com.ht.scada.common.tag.util.EndTagSubTypeEnum;
 import com.ht.scada.common.tag.util.RedisKeysEnum;
 import com.ht.scada.common.tag.util.VarSubTypeEnum;
 import com.ht.scada.data.Config;
 import com.ht.scada.data.service.RealtimeDataService;
 import com.ht.scada.oildata.CommonUtils;
+import com.ht.scada.oildata.Scheduler;
 import com.ht.scada.oildata.calc.GTCalc;
 import com.ht.scada.oildata.calc.GTDataComputerProcess;
 import com.ht.scada.oildata.calc.GTReturnKeyEnum;
+import com.ht.scada.oildata.entity.WetkSGT;
 import com.ht.scada.oildata.model.GTSC;
+import com.ht.scada.oildata.service.WellInfoService;
+import com.ht.scada.oildata.service.WetkSGTService;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -44,19 +50,15 @@ public class SgtCalcService {
     protected Sql2o sql2o;
     @Autowired
     private RealtimeDataService realtimeDataService;
+    @Autowired
+    private WetkSGTService wetkSGTService;
+    @Autowired
+    private WellInfoService wellInfoService;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     public static boolean isListen = Config.INSTANCE.getConfig().getBoolean("is.listen", false);
 
-    public Sql2o getSql2o() {
-        return sql2o;
-    }
-
     public void setSql2o(Sql2o sql2o) {
         this.sql2o = sql2o;
-    }
-
-    public RealtimeDataService getRealtimeDataService() {
-        return realtimeDataService;
     }
 
     public void setRealtimeDataService(RealtimeDataService realtimeDataService) {
@@ -90,6 +92,8 @@ public class SgtCalcService {
                         log.info("时间不一致：" + code);
                         return;
                     }
+
+
                     if (!isSgtOk(code)) {
                         log.info("错误功图：" + code);
                         realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
@@ -97,14 +101,31 @@ public class SgtCalcService {
                         realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), "0");
                         realtimeDataService.putValue(code, RedisKeysEnum.GTMJ.toString(), "0");
                         realtimeDataService.putValue(code, RedisKeysEnum.GLGL.toString(), "0");
+                        try {
+                            //给威尔泰克写数据
+                            wetkTask(code, date, "", "", "", "");
+                        } catch (Exception e) {
+                        }
                         return;
                     }
+                    String wy = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase());
+                    String zh = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase());
+                    String powerStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase());
+                    String dlStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase());
+                    String cC = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase());
 
-                    float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.WEI_YI_ARRAY.toString().toLowerCase()), ",");
-                    float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.ZAI_HE_ARRAY.toString().toLowerCase()), ",");
-                    float chongCi = Float.valueOf(realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase()));
+                    float[] weiyi = String2FloatArrayUtil.string2FloatArrayUtil(wy, ",");
+                    float[] zaihe = String2FloatArrayUtil.string2FloatArrayUtil(zh, ",");
+                    float chongCi = Float.valueOf(cC);
                     log.info("开始计算：" + code + " " + time + "  " + LocalDateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-                    handleData(code, date, weiyi, zaihe, chongCi);
+
+                    try {
+                        //给威尔泰克写数据
+                        wetkTask(code, date, wy, zh, powerStr, dlStr);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    handleData(code, date, weiyi, zaihe, chongCi, powerStr, dlStr);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -112,22 +133,22 @@ public class SgtCalcService {
         }, 20, TimeUnit.SECONDS);
     }
 
-    public void handleData(String code, Date date, float[] weiyi, float[] zaihe, float chongCi) {
+    public void handleData(String code, Date date, float[] weiyi, float[] zaihe, float chongCi, String powerStr, String dlStr) {
         //判断功图是否正常
         Float CYL = null, YL = null, HS = null, PHL = null, DYM = null, SXGL = null, XXGL = null, SRGL = null, GGGL = null, SLGL = null, XTXL = null,
                 GTMJ = null, BX = null, SXDL = null, XXDL = null, PJSZ = null, PJXZ = null, ZDCD = null;
         String ZDXX = null, ZDYJ = null;
 
 
-        String powerStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase());
+
         float[] power = null;
         if (powerStr != null) {
-            power = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_ARRAY.toString().toLowerCase()), ",");
+            power = String2FloatArrayUtil.string2FloatArrayUtil(powerStr, ",");
         }
-        String dlStr = realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase());
+
         float[] dl = null;
         if (dlStr != null) {
-            dl = String2FloatArrayUtil.string2FloatArrayUtil(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_LIU_ARRAY.toString().toLowerCase()), ",");
+            dl = String2FloatArrayUtil.string2FloatArrayUtil(dlStr, ",");
         }
 
         Float hs = null, bj = null, bs = 0f;
@@ -225,7 +246,7 @@ public class SgtCalcService {
         } catch (Exception e) {
             log.info(code + "功图分析出现异常：" + e.toString());
         }
-        
+
         //功图面积、光杆功率
         float calc[] = new GTCalc().getGTCalcResult(weiyi, zaihe, chongCi);
         GTMJ = calc[0];
@@ -245,7 +266,7 @@ public class SgtCalcService {
         if (gtsc != null) {
             wetkCyl = gtsc.getRCYL1();
 //            wetkYl = gtsc.getRCYL();
-            wetkYl = wetkCyl * (1-HS);
+            wetkYl = wetkCyl * (1 - HS);
             //更新威尔泰克功图算产
             Date cjsj = null;
             try {
@@ -340,20 +361,21 @@ public class SgtCalcService {
             return query.executeAndFetchFirst(GTSC.class);
         }
     }
-    
+
     /**
      * 根据威尔泰克产液量值更新
+     *
      * @param code
      * @param date
      * @param CYL
-     * @param YL 
+     * @param YL
      */
     private void updateSgtHistoryByCode(String code, Date date, Float CYL, Float YL) {
-        if(date == null) {
+        if (date == null) {
             return;
         }
         String sql = "update T_SGT_HISTORY set CYL = :CYL ,YL = :YL "
-                    + "where CODE=:CODE and DATETIME=:DATETIME ";
+                + "where CODE=:CODE and DATETIME=:DATETIME ";
         try (Connection con = sql2o.open()) {
             con.createQuery(sql)
                     .addParameter("CODE", code)
@@ -362,5 +384,70 @@ public class SgtCalcService {
                     .addParameter("YL", YL)
                     .executeUpdate();
         }
+    }
+
+    private void wetkTask(String code, Date date, String wy, String zh, String powerStr, String dlStr) {
+        log.info("开始写入威尔泰克数据：{}——{}", code, com.ht.scada.common.tag.util.CommonUtils.date2String(new Date()));
+        // 功图id(32位随机数)
+        String gtId;
+        float CC, CC1, ZDZH, ZXZH;
+        WetkSGT wetkSGT = new WetkSGT();
+        gtId = com.ht.scada.common.tag.util.CommonUtils.getCode();
+        CC = getRealtimeData(code, VarSubTypeEnum.CHONG_CHENG.toString().toLowerCase());
+        CC1 = getRealtimeData(code, VarSubTypeEnum.CHONG_CI.toString().toLowerCase());
+        ZDZH = getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase());
+        ZXZH = getRealtimeData(code, VarSubTypeEnum.ZUI_XIAO_ZAI_HE.toString().toLowerCase());
+        wetkSGT.setID(gtId);
+        wetkSGT.setJH(code);
+        wetkSGT.setCJSJ(date);
+        wetkSGT.setCC(CC); // 冲程
+        wetkSGT.setCC1(CC1); // 冲次
+        wetkSGT.setSXCC1(CC1); //todo 上行冲次，暂时与冲次值相同
+        wetkSGT.setXXCC1(CC1); //todo 下行冲次，暂时与冲次值相同
+        wetkSGT.setWY(string2String(wy, 3));
+        wetkSGT.setZH(string2String(zh, 3));
+        wetkSGT.setGL(string2String(powerStr, 3));
+        wetkSGT.setDL(string2String(dlStr, 3));
+        wetkSGT.setBPQSCGL(string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.GONG_LV_YIN_SHU_ARRAY.toString().toLowerCase()), 3));
+        wetkSGT.setZJ(string2String(realtimeDataService.getEndTagVarYcArray(code, VarSubTypeEnum.DIAN_GONG_TU_ARRAY.toString().toLowerCase()), 3));
+        wetkSGT.setZDZH(ZDZH);// 最大载荷
+        wetkSGT.setZXZH(ZXZH); // 最小载荷
+        wetkSGT.setBZGT(null); // 暂时为空
+        wetkSGT.setGLYS(getRealtimeData(code, VarSubTypeEnum.GV_GLYS.toString().toLowerCase()));
+        wetkSGT.setYGGL(getRealtimeData(code, VarSubTypeEnum.GV_YG.toString().toLowerCase()));
+        wetkSGT.setWGGL(getRealtimeData(code, VarSubTypeEnum.GV_WG.toString().toLowerCase()));
+        wetkSGTService.addOneRecord(wetkSGT); // 持久化
+
+        Map<String, Object> basicInforOfthisEndtag = wellInfoService.findBasicCalculateInforsByCode(code);
+        Float bengJing = null, hanShui = null, yymd = null;
+        if (basicInforOfthisEndtag != null) {		// 不为空
+            bengJing = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("bj")).toString());
+//            hanShui = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("hs")).toString());
+            yymd = Float.parseFloat(((BigDecimal) basicInforOfthisEndtag.get("dmyymd")).toString());
+        }
+        String strHs = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.HAN_SHUI_LV.toString());
+        if (strHs != null) {
+            hanShui = Float.valueOf(strHs);
+        }
+        wetkSGTService.addOneGTFXRecord(gtId, code, date, CC, CC1, ZDZH, ZXZH, bengJing, hanShui, yymd, 1F); // 功图分析表持久化数据
+    }
+
+    private String string2String(String str, int pos) {
+        if (str == null || str.isEmpty()) {
+            return "";
+        }
+        String[] array = str.split(",");
+        String rtnStr = "";
+        int flag = 0;
+        for (String singleVal : array) {
+            singleVal = com.ht.scada.common.tag.util.CommonUtils.format(singleVal, pos);
+            if (flag == array.length - 1) {
+                rtnStr += singleVal;
+            } else {
+                rtnStr += singleVal + ",";
+            }
+            flag++;
+        }
+        return rtnStr;
     }
 }

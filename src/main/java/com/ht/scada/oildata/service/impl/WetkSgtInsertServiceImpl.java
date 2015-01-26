@@ -36,6 +36,10 @@ import org.sql2o.Sql2o;
  */
 @Transactional
 @Service("wetkSgtInsertService")
+@Deprecated
+/**
+ * 由SgtCalcService代替
+ */
 public class WetkSgtInsertServiceImpl implements WetkSgtInsertService {
 
     private static final Logger log = LoggerFactory.getLogger(WetkSgtInsertServiceImpl.class);

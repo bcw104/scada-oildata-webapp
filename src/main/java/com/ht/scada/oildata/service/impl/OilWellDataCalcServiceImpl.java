@@ -68,7 +68,8 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
     @Override
     public void runBanBaoTask() {
         log.info("班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
-        if (Scheduler.youJingList != null && Scheduler.youJingList.size() > 0) {
+        youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
+        if (youJingList != null && youJingList.size() > 0) {
             for (EndTag youJing : Scheduler.youJingList) {
                 try {
                     String code = youJing.getCode();

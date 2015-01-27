@@ -11,6 +11,7 @@ import com.ht.scada.oildata.service.SgtAnalyzeService;
 import com.ht.scada.oildata.util.String2FloatArrayUtil;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -41,12 +42,14 @@ public class SgtAnalyzeServiceImpl implements SgtAnalyzeService {
 
     @Override
     public void sgtAnalyze() {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.DAY_OF_MONTH, c.get(Calendar.DAY_OF_MONTH) - 1);
         String sql = "SELECT code, datetime, chong_ci"
-                + " FROM T_SGT_HISTORY  WHERE chong_cheng>0 and chong_ci>0 and zui_xiao_zai_he>0 and jssj is null order by datetime";
+                + " FROM T_SGT_HISTORY  WHERE datetime>:TIME and chong_cheng>0 and chong_ci>0 and zui_xiao_zai_he>0 and jssj is null order by datetime";
 
         List<Map<String, Object>> sgtDataList = null;
         try (Connection con = sql2o.open()) {
-            sgtDataList = con.createQuery(sql).executeAndFetchTable().asList();
+            sgtDataList = con.createQuery(sql).addParameter("TIME", c.getTime()).executeAndFetchTable().asList();
         } catch (Exception e) {
             e.printStackTrace();
         }

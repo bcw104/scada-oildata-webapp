@@ -23,8 +23,6 @@ import com.ht.scada.data.service.RealtimeDataService;
  */
 public class YouJingSbdazc implements Runnable {
 	
-	private static int exceptionCount = 0;
-	
     private Sql2o sql2o;
     private List<Map<String, Object>> recordList;
     private RealtimeDataService realtimeDataService;
@@ -205,7 +203,6 @@ public class YouJingSbdazc implements Runnable {
             		
             	} catch (Exception e1) {
             		e1.printStackTrace();
-            		exceptionCount++;
             	}
             	
     		} // endInnerFor....
@@ -226,7 +223,7 @@ public class YouJingSbdazc implements Runnable {
 			e1.printStackTrace();
 		}
     	    	
-    	System.out.println("设备信息记录插入完成！" + exceptionCount);
+    	System.out.println("设备信息记录插入完成！" );
     }
     
     /**

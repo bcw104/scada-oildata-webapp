@@ -27,20 +27,26 @@
     <!--<bean id="faultSerializer" class="com.ht.scada.data.redis.FaultRecordSerializer" />-->
     <!--<bean id="offLimitsSerializer" class="com.ht.scada.data.redis.OffLimitsRecordSerializer" />-->
 
-<!--    <redis:listener-container connection-factory="connectionFactory">
+    <!--    <redis:listener-container connection-factory="connectionFactory">
         <redis:listener ref="alarmListener" method="sgtCalc" topic="SgtChannel" />
     </redis:listener-container>
     <bean id="alarmListener" class="com.ht.scada.oildata.service.impl.SgtCalcService"/>-->
     
-<!--    <bean id="connectionFactory1"
-          class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
-          p:hostName="${redis.host1}" p:port="${redis.port1}" p:password="" />
-    <bean id="redisTemplate1" class="org.springframework.data.redis.core.StringRedisTemplate"
-              p:connectionFactory-ref="connectionFactory1" />-->
+    <!-- 报警信息转储 -->
+<!--    <redis:listener-container connection-factory="connectionFactory">
+        <redis:listener ref="soeListener" method="alarmHandle" topic="SoeChannel" />
+    </redis:listener-container>
+    <bean id="soeListener" class="com.ht.scada.oildata.dr.AlarmRouter"/>-->
+    
+    <!--    <bean id="connectionFactory1"
+class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+p:hostName="${redis.host1}" p:port="${redis.port1}" p:password="" />
+<bean id="redisTemplate1" class="org.springframework.data.redis.core.StringRedisTemplate"
+    p:connectionFactory-ref="connectionFactory1" />-->
     
     <bean id="connectionFactory2"
           class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
           p:hostName="${redis.host2}" p:port="${redis.port2}" p:password="" />
     <bean id="redisTemplate2" class="org.springframework.data.redis.core.StringRedisTemplate"
-              p:connectionFactory-ref="connectionFactory2" />
+          p:connectionFactory-ref="connectionFactory2" />
 </beans>

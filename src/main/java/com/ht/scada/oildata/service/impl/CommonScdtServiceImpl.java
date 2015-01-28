@@ -170,6 +170,34 @@ public class CommonScdtServiceImpl implements CommonScdtService {
         }
         return map;
     }
+    
+    /**
+     * 获得"时间范围内"生产时间持续为零的井
+     * @param startTime	- 开始时间
+     * @param endTime	- 结束时间
+     * @return
+     */
+    public Map<String, String> getChangTingClosedInfo(Calendar startTime, Calendar endTime) {
+        Map<String, String> map = new HashMap<>();
+
+        String sql = "select * from (select avg(scsj) a,jh FROM YS_DBA01@YDK where jh in (select code from t_end_tag where type='YOU_JING')  "
+                + " and rq>=:startTime and rq<=:endTime group by jh) "
+                + " where a<1 ";
+
+        try (Connection con = sql2o.open()) {
+            org.sql2o.Query query = con.createQuery(sql);
+            query.addParameter("startTime", startTime.getTime());
+            query.addParameter("endTime", endTime.getTime());
+            List<Row> dataList = query.executeAndFetchTable().rows();
+            for (Row row : dataList) {
+                map.put(row.getString("jh"), "CTJ");
+                log.info(map.get(row.getString("jh")));
+            }
+        }
+        return map;
+    }
+    
+    
 
     @Override
     public void test() {

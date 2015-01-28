@@ -10,9 +10,14 @@ package com.ht.scada.oildata.service;
  */
 public interface SlytGljService {
     /**
-     * 生产考核指标
+     * 生产考核指标 - 系统运行指标
      */
     void runSckhzbTask();
+    
+    /**
+     * 生产考核指标，更新函数 - 经营管理指标、系统运行指标
+     */
+    void runSckhzbUpdateTask();
     
     /**
      * 四化运维考核

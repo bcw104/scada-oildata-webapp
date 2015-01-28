@@ -89,7 +89,8 @@ public class Scheduler {
 //        qkOilWellRecordService.runSjRiBaoTask();
 //        commonScdtService.test();
 //          slytGljService.runSckhzbTask();
-//        slytGljService.shywkh();
+//        slytGljService.runSckhzbUpdateTask();
+//          slytGljService.shywkh();
 //        sgtAnalyzeService.sgtAnalyze();
 //        netCheckService.netChecking();
     }
@@ -249,11 +250,17 @@ public class Scheduler {
     /*******************END 桥口定时任务****************************************/
     
     /*******************START 胜利油田局生产指标考核****************************************/
-//    @Scheduled(cron = "0 50 6 * * ? ")
+    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
         slytGljService.runSckhzbTask();
     }
-//    @Scheduled(cron = "0 0/15 * * * ? ")
+    
+  @Scheduled(cron = "0 0 10 * * ? ")
+    private void sczbkhupdateTask() {
+    	slytGljService.runSckhzbUpdateTask();
+    }
+    
+    @Scheduled(cron = "0 0/15 * * * ? ")
     private void  shywkhTask(){					// 运维考核日报
     	 slytGljService.shywkh();
     }

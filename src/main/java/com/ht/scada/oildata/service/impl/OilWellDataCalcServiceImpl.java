@@ -70,7 +70,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
         log.info("班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
         youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
         if (youJingList != null && youJingList.size() > 0) {
-            for (EndTag youJing : Scheduler.youJingList) {
+            for (EndTag youJing : youJingList) {
                 try {
                     String code = youJing.getCode();
                     //班报时间段
@@ -520,7 +520,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 //                    YL = rtYL == null ? null : Float.valueOf(rtYL);
                     HDL = rtHDL == null ? 0f : Float.valueOf(rtHDL);
 
-                    
+
                     Calendar c = Calendar.getInstance();
                     c.set(Calendar.MINUTE, 0);
                     c.set(Calendar.SECOND, 0);
@@ -551,7 +551,7 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     }
 
                     Float bdxs = (youJing.getBdxs() == null || youJing.getBdxs() <= 0) ? 1f : youJing.getBdxs();  //标定系数
-                    
+
                     realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_CYL.toString(), String.valueOf(CYL * bdxs)); //昨日产液量
                     realtimeDataService.putValue(code, RedisKeysEnum.WETK_ZR_YL.toString(), String.valueOf(CYL * bdxs * (1 - HS / 100)));    //昨日产油量
 

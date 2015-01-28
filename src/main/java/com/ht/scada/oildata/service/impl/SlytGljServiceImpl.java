@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,10 +30,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.sql2o.Connection;
 import org.sql2o.Sql2o;
+import org.sql2o.data.Row;
 
 /**
  * @author 赵磊 2014-12-15 19:04:22
  * @author PengWang 2014-12-29 23:10:00 胜利油田 考核指标及运维日报 ,2015.1.14修改
+ * 		   PengWang 2015-01-27 10:44:00  生产运行指标、管理指标 数据获得
  */
 @Transactional
 @Service("slytGljService")
@@ -81,9 +84,12 @@ public class SlytGljServiceImpl implements SlytGljService {
 
         List<Map<String, Object>> list = null;
         try (Connection con = sql2o.open()) {
-            list = con.createQuery("select * from T_END_TAG where code <> 'GD1-19-815'").executeAndFetchTable().asList();
+            // list = con.createQuery("select * from T_END_TAG where code <> 'GD1-19-815'").executeAndFetchTable().asList();
+            list = con.createQuery("select * from T_END_TAG where code not in ('GD1-18-1', 'GD1-18-505', 'GD1-18C505', 'GD1-19XNB3', 'GD1-17P406', 'GD1-18P405', 'GD1-17X905', 'GD1-18X005', 'GD1-19N3', 'GD1-18N5', 'GD1-19-815')").executeAndFetchTable().asList();
         } catch (Exception e) {
+        	e.printStackTrace();
         }
+        
         if (list != null) {
             scdyNum = 0;
             for (Map<String, Object> map : list) {
@@ -156,35 +162,6 @@ public class SlytGljServiceImpl implements SlytGljService {
         /**
          * *计算采集数据齐全率********
          */
-//        if (list != null) {
-//            float allQqNum = 0;
-//            float onNum = 0;
-//            for (Map<String, Object> map : list) {
-//                String type = (String) map.get("type");
-//                String subType = (String) map.get("sub_type");
-//                String code = (String) map.get("code");
-//                if ("YOU_JING".equals(type) && "true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
-//                    allQqNum = allQqNum + 4;
-//                    if ("YOU_LIANG_SHI".equals(subType)) {
-//                        allQqNum++;
-//                        if (getRealtimeData(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > 0) {
-//                            onNum++;
-//                        }
-//                    }
-//                    if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6"))) {//套压
-//                        onNum++;
-//                    }
-//                    if (getRealtimeData(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) > 0) {
-//                        onNum++;
-//                    }
-//                    if (getRealtimeData(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) > 0) {
-//                        onNum++;
-//                    }
-//                    if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15"))) {//智能电表
-//                        onNum++;
-//                    }
-//                }
-//            }
         log.info( "（数据齐全率）下面打印缺失数据信息： " );
         if (list != null) {
             float allQqNum = 0;
@@ -205,11 +182,6 @@ public class SlytGljServiceImpl implements SlytGljService {
                             	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 载荷为： " , getRealtimeDataNew(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) );
                             }
                         }
-//                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6"))) {//套压
-//                            onNum++;
-//                        }else {
-//                         	log.info(code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 套压为： " , realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6") );
-//                        }
                         if (getRealtimeDataNew(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()) >  -10000) {//套压
                             onNum++;
                         }else {
@@ -294,9 +266,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                 //报警发生30分钟内进行处置为及时处置
                 c.set(Calendar.MINUTE, c.get(Calendar.MINUTE) + 30);
                 try (Connection con = sql2o.open()) {
-                    //Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ID = :ID and HANDLE_TIME is not null and HANDLE_TIME >=:startTime and HANDLE_TIME <=:endTime ")
-                    //Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE A where A.ALARMRECORD_ID = :ID and HANDLE_TIME is not null ")
-                	  Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME is not null ")	// 落实时间不为空
+                	Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME is not null ")	// 落实时间不为空
                 			//.addParameter("startTime", date)
                             //.addParameter("endTime", c.getTime())
                             .addParameter("ID", ID)
@@ -374,65 +344,6 @@ public class SlytGljServiceImpl implements SlytGljService {
             log.info("报警处置符合现场实际数：" + fhNum);
             log.info("报警处置符合率：" + CZFHL);
         }
-
-        
-        /**
-         * *************** 计算油井时率（生产运行指标）  *************
-         * 算法：当天油井累计生产时间/范围内油井日历生产时间。
-         * 		分为三种：（1）间开井
-         * 				 （2）非间开井
-         * 				 （3）通讯中断井
-         */
-        
-        
-        /**
-         * *************** 计算油井躺井率（生产运行指标） ************
-         * 算法：计算范围：油井总数 - 长停井 - 间开井 - 作业井 - 自喷井。 在剩余的井中，连续两天生产时间为零即认为在计算时刻，该井是躺井的。
-         */
-        
-        
-        /**
-         * *************** 计算油井平衡合格率（生产运行指标）  ********
-         * 算法：暂定60~160为合格范围，计算范围是冲程冲次大于零的井
-         */
-        
-        
-        /**
-         * *************** 计算水井时率（生产运行指标）  *************
-         * 算法：（1）日配注量< 12m³的，若完成按24小时计算，若未完成按照实注/配注百分比转换时间；
-         * 		（2）日配注量>=12m³的，按照实际的运行时间计算；
-         */
-        
-        
-        /**
-         * *************** 计算配注完成率（生产运行指标）  ***********
-         * 算法：针对不同层位：（1）合格层（正常层） 90~120
-         * 					（2）控制层（高渗层） 70~110
-         * 					（3）加强层（欠注层） 90~130
-         */
-        
-        
-        /**
-         * *************** 计算注水标耗（经营管理指标）  ********（数据来源不明）
-         */
-        
-        
-        /**
-         * *************** 计算采油标耗（经营管理指标）  ************
-         */
-        
-        
-        /**
-         * *************** 计算自然递减率（经营管理指标）  *******（算法较复杂）
-         */
-        
-        
-        /**
-         * *************** 计算工况合格率（经营管理指标）  *******（暂不计算，数据获取不到）
-         */
-        
-        
-        
         
         
         Calendar calendar = Calendar.getInstance();
@@ -475,6 +386,73 @@ public class SlytGljServiceImpl implements SlytGljService {
         log.info("完成写入生产考核指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
+    /**
+     * 判断实注水是否在配注水量允许范围内
+     * @param sz			- 实际注水值 
+     * @param pz			- 计划注水值
+     * @param lowPersent	- 下限范围
+     * @param highPersent	- 上限范围
+     * @return
+     */
+    public boolean inRange(float sz, float pz, float lowPersent, float highPersent) {
+    	boolean flag = false;		// 默认不在范围内
+    	
+    	if ( sz>=pz*lowPersent && sz<=pz*highPersent ){
+    		flag = true;
+    	}
+    	
+    	return flag;
+    }
+    
+    /**
+	 * 将时间输入串转换成 分钟 "23.40" = 23小时40分中
+	 * @param timeStr
+	 * @return
+	 */
+	public int getMinutes (String timeStr) {
+		int minutes = 0 ;
+		if ( timeStr != null && !"".equals(timeStr)) {
+			if ( timeStr.contains(".") ) {
+				minutes = Integer.parseInt( timeStr.split("\\.")[0] ) * 60  + Integer.parseInt( timeStr.split("\\.")[1]) ;
+			} else {
+				minutes = Integer.parseInt(timeStr) * 60;
+			}
+		}
+		
+		return minutes;
+	}
+    
+    
+    /**
+     * 获得"时间范围内"生产时间持续为零的井号
+     * @param startTime	- 开始时间
+     * @param endTime	- 结束时间
+     * @return
+     */
+    public List<String> getClosedWellInfo(Calendar startTime, Calendar endTime) {
+        List<String> codes = new ArrayList<String>();
+
+        String sql = "select * from (select avg(scsj) a,jh FROM YS_DBA01@YDK where jh in (select code from t_end_tag where type='YOU_JING')  "
+                + " and rq>=:startTime and rq<=:endTime group by jh) "
+                + " where a<1 ";
+
+        try (Connection con = sql2o.open()) {
+            org.sql2o.Query query = con.createQuery(sql);
+            query.addParameter("startTime", startTime.getTime());
+            query.addParameter("endTime", endTime.getTime());
+            List<Row> dataList = query.executeAndFetchTable().rows();
+            for (Row row : dataList) {
+                codes.add(row.getString("jh"));
+            }
+        }
+        // System.out.println("2天生产时间为零的井共 " + codes.size() + " 个！") ;
+        return codes;
+    }
+    
+    
+    
+    
+    
     // 判断是否获取到了非空值，空用数字-10000代替
     private float getRealtimeDataNew(String code, String varName) {
         String value = realtimeDataService.getEndTagVarInfo(code, varName);
@@ -892,6 +870,306 @@ public class SlytGljServiceImpl implements SlytGljService {
          }
     	 
     }
+    
+    
+
+    /**
+     * 更新方法 - 生产运行指标、经营管理指标
+     */
+	@Override
+	public void runSckhzbUpdateTask() {
+		log.info("开始写入生产考核指标（生产运行、经营管理）数据——现在时刻：" + CommonUtils.date2String(new Date()));
+
+        String GLQDM = "30202009";  //管理区代码 YS_DAB08@YDK
+        Float YJSL = null;  		//油井时率
+        Float YJTJL = null; 		//油井躺井率
+        Float PHHGL = null; 		//平衡合格率
+        Float ZSJSL = null; 		//注水井时率
+        Float PZWCL = null; 		//配注完成率
+        Float ZSBH = null;  		//注水标耗
+        Float CYBH = null;  		//采油标耗
+        Float ZRDJL = null; 		//自然递减率
+        Float GKHGL = null; 		//工况合格率
+        
+        List<Map<String, Object>> list = null;
+        try (Connection con = sql2o.open()) {
+            list = con.createQuery("select * from T_END_TAG where code not in ('GD1-18-1', 'GD1-18-505', 'GD1-18C505', 'GD1-19XNB3', 'GD1-17P406', 'GD1-18P405', 'GD1-17X905', 'GD1-18X005', 'GD1-19N3', 'GD1-18N5', 'GD1-19-815')").executeAndFetchTable().asList();
+        } catch (Exception e) {
+        	e.printStackTrace();
+        }
+		
+    	Calendar c = Calendar.getInstance();							// 当日开始时间
+      	c.set(Calendar.MINUTE, 0);
+      	c.set(Calendar.SECOND, 0);
+      	c.set(Calendar.MILLISECOND, 0);
+      	c.set(Calendar.HOUR_OF_DAY, 0);
+        String wellSearchStr = "select * from ys_dba01@ydk where jh in (select code from t_end_tag where type = 'YOU_JING' and code not in ('GD1-18-1', 'GD1-18-505', 'GD1-18C505', 'GD1-19XNB3', 'GD1-17P406', 'GD1-18P405', 'GD1-17X905', 'GD1-18X005', 'GD1-19N3', 'GD1-18N5', 'GD1-19-815') ) and rq = :datetime";
+      	String searchStrWater = "select * from YS_DBA02@YDK where rq = :datetime and jh in (select code from t_end_tag where type = 'ZHU_SHUI_JING' and code not in ('GD1-17X004','GD1-18-303') ) ";
+        List<Map<String, Object>> wellDailyRecords = null;		// 油井日报记录 - 源点
+        List<Map<String, Object>> waterDailyRecords = null;		// 水井日报记录 - 源点
+        
+      	try (Connection con = sql2o.open()) {
+      		wellDailyRecords = con.createQuery(wellSearchStr)
+      				.addParameter("datetime",c.getTime())
+      				.executeAndFetchTable().asList();
+      		waterDailyRecords = con.createQuery(searchStrWater)
+      				.addParameter("datetime",c.getTime())
+      				.executeAndFetchTable().asList();
+      		
+      	} catch (Exception e) {
+      		e.printStackTrace();
+      	}
+      	
+        /**
+         * *************** 计算油井时率（生产运行指标）  *************
+         * 算法：当天油井累计生产时间/范围内油井日历生产时间。
+         * 		分为三种：（1）间开井
+         * 				 （2）非间开井
+         * 				 （3）通讯中断井
+         */
+        // YJSL - 时间来源，不用从实时库获得，用从关系库获得
+        int wellNum = 0; 					// 总井数
+        int ctcs_UnConnectedNum = 0; 		// 措施及长停井不进行计算(该处不计算井)
+        int ctcsNum = 0; 					// 措施及长停井不进行计算
+        Float realProduceTime = 0f;			// 实际生产时间 (分钟)
+        Float calerdarProduceTime = 0f;		// 日历生产时间 (分钟)
+        int calerdarHour = 24;				// 有效的日历生产小时
+        if (wellDailyRecords != null) {
+			for (Map<String, Object> map : wellDailyRecords) {
+				String code = (String) map.get("jh");
+
+				String ctjStr = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString());			// 判断是否为长停井
+				String gjyyStr = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString());			// 判断是否为措施关井
+				if ( (ctjStr != null && !"".equals(ctjStr))  ||	(gjyyStr != null && !"".equals(gjyyStr)) ) {		// 为第二个参数使用的计数
+					ctcsNum++;
+				}
+
+				// 措施关井+长停井,通讯不上的（能通讯上的一般可以检测生产时间）
+				if ( ( (ctjStr != null && !"".equals(ctjStr)) || (gjyyStr != null && !"".equals(gjyyStr)) )
+						 &&
+					 ( "false".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status")))	) { 				// 此处可以优化，再排除‘关井’的井
+					ctcs_UnConnectedNum++;
+				} else {
+					if (map.get("scsj") == null) {
+						log.info(code + " 生产时间为： " + map.get("scsj"));
+					} else {
+						// String scsj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString()); 	// 从试试库获得生产时间
+						String scsj = ((BigDecimal) map.get("scsj")).toString(); 				// 获得源点库生产时间
+						realProduceTime = realProduceTime + getMinutes(scsj);					// 时间累加
+					}
+				}
+			}
+        }
+        wellNum = wellDailyRecords.size();														// 获得总井数
+        calerdarProduceTime = (float) ( (wellNum - ctcs_UnConnectedNum) * calerdarHour*60 );	// 获得日历生产时间
+        YJSL = ( realProduceTime / calerdarProduceTime );	
+        log.info( "油井时率: " + YJSL.floatValue() + "	总井数: " + wellNum + ", 有效井数:" +  ( wellNum - ctcs_UnConnectedNum ) + ", 实际时间/日历时间(分): " + realProduceTime + "/" + calerdarProduceTime );
+        
+        
+        /**
+         * *************** 计算油井躺井率（生产运行指标） ************
+         * 算法：计算范围：油井总数 - 长停井 - 间开井 - 作业井 - 自喷井。 在剩余的井中，连续两天生产时间为零即认为在计算时刻，该井是躺井的。
+         */
+        Calendar endTime   = Calendar.getInstance();
+        Calendar startTime = Calendar.getInstance();
+        startTime.set(Calendar.DAY_OF_MONTH, endTime.get(Calendar.DAY_OF_MONTH) - 1);	// 若8:00后执行，今日日报已经生成，用今日和昨日的，-1；若8:00前执行，用昨天和前天的，-2即可；
+        List<String> unrunWells = getClosedWellInfo(startTime, endTime);				// 没有运行的井
+
+        int useableWellNum = 0 ;		// 躺井的井
+        for ( int i=0; i< unrunWells.size(); i++ ) {
+        	String code = unrunWells.get(i);
+        	
+        	// 长停井或者措施关井(怎么判断作业) XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        	if ( ( realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()) != null
+                    && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString())) )
+                    ||  ( realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()) != null
+                            && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString())) ) ) {
+        			// log.info( code + " 措施关井或长停: "  );
+                    continue;       	
+            }
+        	useableWellNum++;            
+        }
+        YJTJL = useableWellNum / (float)( wellNum - ctcsNum);
+        log.info( "躺井率: " + YJTJL + "		躺井井数/有效井数: " + useableWellNum + "/" + (wellNum - ctcsNum) );
+        
+        
+        /**
+         * *************** 计算油井平衡合格率（生产运行指标）  ********
+         * 算法：暂定60~160为合格范围，计算范围是冲程冲次大于零的井
+         */
+        int countNum=0; 				// 需要计算的井个数
+        int phdQualified = 0 ;			// 处于合格范围的个数
+        for (Map<String, Object> map : list) {
+            String type = (String) map.get("type");
+            String subType = (String) map.get("sub_type");
+            String code = (String) map.get("code");
+            switch (type) {
+                case "YOU_JING":{
+                	if ( !"LUO_GAN_BENG".equals(subType) ) {
+                		String phlStr = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.PING_HENG_LV.toString());
+                		// System.out.println( code + " 平衡率为 : " + phlStr);
+                		if (phlStr!=null && !phlStr.equals("") ) {
+                			countNum ++;
+                			double phl = Double.parseDouble( phlStr );
+                			
+                			if ( phl*100>=60 && phl*100<=160 ) {
+                				phdQualified ++;
+                			} else {
+                				// System.out.println( code + " 平衡率为 : " + phl * 100);
+                			}
+                		} else { }
+                	}
+                }	
+
+                default:
+                    break;
+            }
+        }
+        PHHGL = phdQualified/(float)countNum;
+        log.info("平衡合格率： " + PHHGL + "	合格数/总数： " + phdQualified + "/" + countNum );
+        
+        
+        /**
+         * *************** 计算水井时率（生产运行指标）  *************
+         * 算法：（1）日配注量< 12m³的，若完成按24小时计算，若未完成按照实注/配注百分比转换时间；
+         * 		（2）日配注量>=12m³的，按照实际的运行时间计算；
+         */
+        int waterWellNum = waterDailyRecords.size();		// 注水井个数
+    	int jhgjs = 0;										// 计划关井个数
+        Float realProduceTimeWW = 0f;						// 实际生产时间 (分钟)
+        Float calerdarProduceTimeWW = 0f;					// 日历生产时间 (分钟)
+        if (waterDailyRecords != null) {
+        	for (Map<String, Object> map : waterDailyRecords) {
+        		String code = (String) map.get("jh");
+        		String bz = (String) map.get("bz");
+        		if ( bz!=null && bz.contains("关") ) {
+        			jhgjs ++;
+        			// log.info( code + " 处于关井状态(不在计算范围): " + bz);
+        		} else {
+        			if (map.get("scsj") == null) {
+        				log.info(code + " 生产时间为： " + map.get("scsj"));
+        			} else {
+        				// String scsj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString()); 	// 从试试库获得生产时间
+        				String scsj = ((BigDecimal) map.get("scsj")).toString(); 			// 获得源点库生产时间
+        				realProduceTimeWW = realProduceTimeWW + getMinutes(scsj);			// 时间累加
+        			}
+        		}
+        	}
+        }
+        calerdarProduceTimeWW = (float) ( (waterWellNum-jhgjs)*calerdarHour*60 );			// 获得日历生产时间
+        ZSJSL = realProduceTimeWW / calerdarProduceTimeWW;
+        log.info( "水井时率: " + ZSJSL + "	 详情-" + "总井数(有效井数): " + waterWellNum + "(" +  (waterWellNum-jhgjs) + "), 实际生产/日历生产(分): " + realProduceTimeWW + "/" + calerdarProduceTimeWW );
+        
+        
+        /**
+         * *************** 计算配注完成率（生产运行指标）  ***********
+         * 算法：针对不同层位：（1）合格层（正常层） 90~120
+         * 					（2）控制层（高渗层） 70~110
+         * 					（3）加强层（欠注层） 90~130
+         * （说明：若逻辑不做修改，可与"水井时率"算法合并）
+         */
+      	// 读取关系库日报数据 (层位对应的中文含义，flu表及)
+     
+        jhgjs = 0;				// 计划关井个数
+      	int whgpzjs = 0;		// 未合格配注注水井井数
+      	if (waterDailyRecords != null) {
+      		for (Map<String, Object> map : waterDailyRecords) {
+      			String code = (String) map.get("jh");
+      			String bz = (String) map.get("bz");
+      			if ( bz!=null && bz.contains("关") ) {
+      				jhgjs ++ ;
+      				// log.info( code + " 处于关井状态(不在计算范围): " + bz);
+      			} else {
+      				String rpzsl =  ((BigDecimal) map.get("rpzsl")).toString();
+      				String rzsl =  "";
+            	  
+      				if ( map.get("rzsl") == null ) {													// （1）实注为空且非计划关井，不合格
+      					whgpzjs ++ ;
+      					// log.info( code + " 未完成配注！	配注量: " + rpzsl + " , 实注: (空)"  );
+      				} else {
+      					rzsl =  ((BigDecimal) map.get("rzsl")).toString();
+      					if ( !inRange(Float.parseFloat(rzsl), Float.parseFloat(rpzsl), 0.7f, 1.3f) ) {	// (2) 实注未在合格范围内，不合格
+      						whgpzjs ++;
+      						// log.info( code + " 未完成配注！	配注量: " + rpzsl + " , 实注: " + rzsl  );
+      					}
+      				}
+      			}
+      		}
+      	}
+      	PZWCL = ( 1 - whgpzjs/(float)(waterDailyRecords.size()-jhgjs) );								// 配注合格率
+      	log.info( "配注合格率: " + PZWCL + "	总井数(有效井数): " + waterWellNum + "(" +  (waterWellNum-jhgjs) + "),	合格井数: " + (waterDailyRecords.size() - jhgjs - whgpzjs));
+      
+        /**
+         * *************** 计算注水标耗（经营管理指标）  ********（数据来源不明）
+         */
+        ZSBH = null;  		//注水标耗
+        
+        /**
+         * *************** 计算采油标耗（经营管理指标）  ************
+         */
+        Float hdlTotal = 0.0f;		// 耗电总量
+        Float cydySum = 0.0f;		// 产液量*动液面 的和
+        if (wellDailyRecords != null) {
+			for (Map<String, Object> map : wellDailyRecords) {
+				String code = (String) map.get("jh");
+
+				String ctjStr = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString());			// 判断是否为长停井
+				String gjyyStr = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString());			// 判断是否为措施关井
+				if ( ( (ctjStr != null && !"".equals(ctjStr)) || (gjyyStr != null && !"".equals(gjyyStr)) )			// 长停或措施停井且通讯不上的不在计算范围内
+						 &&
+					 ( "false".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status")))	) {
+					// doNothing
+				} else {
+			
+					// 耗电量>0,产液量>0,动液面>0
+					if (  (map.get("hdl") != null && ( Float.parseFloat( ((BigDecimal)map.get("hdl")).toString() ) > 0 ) )
+							&& ( map.get("rcyl1") !=null && ( Float.parseFloat( ((BigDecimal)map.get("rcyl1")).toString() ) > 0 ) ) 
+							&& ( realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DONG_YE_MIAIN.toString()) != null && !"测不出".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DONG_YE_MIAIN.toString())) && Float.parseFloat(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DONG_YE_MIAIN.toString())) > 0 )	) {
+						 // System.out.println( code + " 耗电量为： " + map.get("hdl") + ", 产液量: "+map.get("rcyl1") + ", 动液面: " +  realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DONG_YE_MIAIN.toString()) );
+						 hdlTotal = hdlTotal + Float.parseFloat( ((BigDecimal)map.get("hdl")).toString() ) * 100;
+						 cydySum = cydySum + Float.parseFloat( ((BigDecimal)map.get("rcyl1")).toString() ) * Float.parseFloat(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.DONG_YE_MIAIN.toString()));
+					} else {
+						
+					}
+				}
+			}
+		}
+        CYBH = hdlTotal/cydySum;  				//采油标耗
+        log.info( "采油标耗: " + CYBH + "		KW·100/h·m³·m， 	耗电量*100： " + hdlTotal + ", 产液量*动液面: " + cydySum);
+        
+        /**
+         * *************** 计算自然递减率（经营管理指标）  *******（算法较复杂）
+         */
+        ZRDJL = null; 		//自然递减率
+        
+        /**
+         * *************** 计算工况合格率（经营管理指标）  *******（暂不计算，数据获取不到）
+         */
+        GKHGL = null; 		//工况合格率
+        
+        String sql = "update SHPT.SHPT_SCKHZB set "
+        		+ "YJSL = :YJSL, YJTJL = :YJTJL, PHHGL = :PHHGL, ZSJSL = :ZSJSL, PZWCL = :PZWCL, ZSBH = :ZSBH, CYBH = :CYBH, ZRDJL = :ZRDJL, GKHGL = :GKHGL"
+        		+ " where glqdm = :glqdm and rq = :datetime";
+        try (Connection con = sql2o1.open()) {
+            con.createQuery(sql)
+                    .addParameter("YJSL", YJSL * 100)	 			//油井时率
+                    .addParameter("YJTJL", YJTJL * 100) 			//油井躺井率
+                    .addParameter("PHHGL", PHHGL * 100) 			//平衡合格率
+                    .addParameter("ZSJSL", ZSJSL * 100) 			//注水井时率
+                    .addParameter("PZWCL", PZWCL * 100) 			//配注完成率
+                    .addParameter("ZSBH", ZSBH == null ? null : ZSBH *100) 				//注水标耗
+                    .addParameter("CYBH", CYBH * 100) 									//采油标耗
+                    .addParameter("ZRDJL", ZRDJL == null ? null : ZRDJL * 100) 			//自然递减率
+                    .addParameter("GKHGL", GKHGL == null ? null : GKHGL * 100) 			//工况合格率
+                    .addParameter("glqdm", GLQDM) 					//管理区代码
+                    .addParameter("datetime", c.getTime())			// 日期
+                    .executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        log.info("完成更新生产考核指标（生产运行、经营管理）数据——现在时刻：" + CommonUtils.date2String(new Date()));
+        
+	}
     
     
 }

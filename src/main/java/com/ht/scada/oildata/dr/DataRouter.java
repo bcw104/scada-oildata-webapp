@@ -10,6 +10,7 @@ import com.ht.scada.data.Config;
 import com.ht.scada.data.service.RealtimeDataService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,8 @@ public class DataRouter {
         if (taskList != null) {
             for (Map<String, Object> map : taskList) {
                 try {
+                    long delays = 0;
+                    long periods = 0;
                     String sid = (String) map.get("sid");
                     //分片处理
                     if (!sid.equals(Config.INSTANCE.getConfig().getString("dr.sid", "1"))) {
@@ -70,18 +73,21 @@ public class DataRouter {
                     Integer delay = ((BigDecimal) map.get("delay")).intValue();
                     final String tableName = (String) map.get("tablename");
                     final Integer isUpdate = ((BigDecimal) map.get("isupdate")).intValue();
+                    final String cron = (String) map.get("cron");
                     final Integer isCreateTalbe = ((BigDecimal) map.get("iscreate")).intValue();
                     final String updateKey = ((String) map.get("updatekey")) == null ? null : ((String) map.get("updatekey")).toLowerCase();
-                    TimeUnit tu;
                     switch (timeUnit) {
                         case "second":
-                            tu = TimeUnit.SECONDS;
+                            periods = interval * 1000;
+                            delays = getDelay(cron, "second") + delay * 1000;
                             break;
                         case "minute":
-                            tu = TimeUnit.MINUTES;
+                            periods = interval * 60 * 1000;
+                            delays = getDelay(cron, "minute") + delay * 60 * 1000;
                             break;
-                        default:
-                            tu = TimeUnit.SECONDS;
+                        case "hour":
+                            periods = interval * 60 * 60 * 1000;
+                            delays = getDelay(cron, "hour") + delay * 60 * 60 * 1000;
                             break;
                     }
                     final List<Map<String, Object>> fieldList = con.createQuery("select * from D_TASK_FIELD where RWMC=:RWMC")
@@ -91,8 +97,8 @@ public class DataRouter {
                             .addParameter("RWMC", taskName)
                             .executeAndFetchTable().asList();
                     if ("油井设备档案实时数据".equals(taskName.trim())) {
-                        YouJingSbdazc yjsbzc = new YouJingSbdazc(con2, recordList, realtimeDataService);
-                        executorService.scheduleAtFixedRate(yjsbzc, delay, interval, tu);
+                        YouJingSbdazc yjsbzc = new YouJingSbdazc(sql2o2, recordList, realtimeDataService);
+                        executorService.scheduleAtFixedRate(yjsbzc, delays, periods, TimeUnit.MILLISECONDS);
                         continue;
                     }
 
@@ -118,6 +124,8 @@ public class DataRouter {
                                 @Override
                                 public void run() {
                                     log.info("执行——{}——任务", taskName);
+//                                    System.out.println(DateFormatUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+
                                     Date date = new Date();
                                     try {
                                         if (hasUpdate > 0) {
@@ -143,7 +151,7 @@ public class DataRouter {
                                         e.printStackTrace();
                                     }
                                 }
-                            }, delay, interval, tu);
+                            }, delays, periods, TimeUnit.MILLISECONDS);
                         }
                     }
                 } catch (Exception e) {
@@ -258,7 +266,7 @@ public class DataRouter {
             }
             query.addToBatch();
             i++;
-            if (i >= 2) {// 每?条执行一次提交
+            if (i >= 50) {// 每?条执行一次提交
                 query.executeBatch();
                 i = 0;
             }
@@ -284,7 +292,6 @@ public class DataRouter {
             String s2 = key.split(",")[1];
             sqlBuilder.append(" where " + s1 + " = :" + s2);
         }
-
         String sql = sqlBuilder.toString();
         log.info(sql);
         return sql;
@@ -406,5 +413,73 @@ public class DataRouter {
         String s2 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zh_zai_xian_cgq2")) ? "1" : "0"; //载荷
         String s1 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yth_zai_xian_cgq1")) ? "1" : "0"; //一体化载荷位移
         return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
+    }
+
+    private long getDelay(String cron, String type) {
+        Calendar start = Calendar.getInstance();
+        Calendar end = Calendar.getInstance();
+        if (cron != null && !cron.isEmpty()) {
+            Integer hh = null;
+            Integer mm = null;
+            Integer ss = null;
+            try {
+                String times[] = cron.split(":");
+                if (!"*".equals(times[0])) {
+                    hh = Integer.valueOf(times[0]);
+                }
+                if (!"*".equals(times[1])) {
+                    mm = Integer.valueOf(times[1]);
+                }
+                if (!"*".equals(times[2])) {
+                    ss = Integer.valueOf(times[2]);
+                }
+            } catch (Exception e) {
+                hh = null;
+                mm = null;
+                ss = null;
+            }
+            end.set(Calendar.MILLISECOND, 0);
+            if (ss != null) {
+                end.set(Calendar.SECOND, ss);
+            }
+            if (mm != null) {
+                end.set(Calendar.MINUTE, mm);
+            }
+            if (hh != null) {
+                end.set(Calendar.HOUR_OF_DAY, hh);
+            }
+            if (end.before(start)) {
+                switch (type) {
+                    case "second":
+                        end.set(Calendar.MINUTE, end.get(Calendar.MINUTE) + 1);
+                        break;
+                    case "minute":
+                        end.set(Calendar.HOUR_OF_DAY, end.get(Calendar.HOUR_OF_DAY) + 1);
+                        break;
+                    case "hour":
+                        end.set(Calendar.DAY_OF_MONTH, end.get(Calendar.DAY_OF_MONTH) + 1);
+                        break;
+                }
+            }
+        } else {
+            switch (type) {
+                case "second":
+                    end.set(Calendar.MILLISECOND, 0);
+                    end.set(Calendar.SECOND, end.get(Calendar.SECOND) + 1);
+                    break;
+                case "minute":
+                    end.set(Calendar.MILLISECOND, 0);
+                    end.set(Calendar.SECOND, 0);
+                    end.set(Calendar.MINUTE, end.get(Calendar.MINUTE) + 1);
+                    break;
+                case "hour":
+                    end.set(Calendar.MILLISECOND, 0);
+                    end.set(Calendar.SECOND, 0);
+                    end.set(Calendar.MINUTE, 0);
+                    end.set(Calendar.HOUR_OF_DAY, end.get(Calendar.HOUR_OF_DAY) + 1);
+                    break;
+            }
+        }
+        return end.getTime().getTime() - start.getTime().getTime();
     }
 }

@@ -214,7 +214,7 @@ public class YouJingSbdazc implements Runnable {
     		}
     		
     		
-    		System.out.println("油井： " + (String)recordList.get(i).get("jlmc") + " 相关设备信息插入完毕！");
+//    		System.out.println("油井： " + (String)recordList.get(i).get("jlmc") + " 相关设备信息插入完毕！");
     	} // endOuterFor...
     	
     	try{

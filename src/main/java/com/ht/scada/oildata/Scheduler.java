@@ -5,7 +5,6 @@ import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
 import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.NetCheckService;
-import com.ht.scada.oildata.service.OilProductCalcService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
 import com.ht.scada.oildata.service.QkOilWellRecordService;
 import com.ht.scada.oildata.service.ScslService;
@@ -13,14 +12,9 @@ import com.ht.scada.oildata.service.SgtAnalyzeService;
 import com.ht.scada.oildata.service.SlytGljService;
 import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
-import com.ht.scada.oildata.service.WetkSgtInsertService;
-import com.ht.scada.oildata.service.impl.SgtCalcService;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -35,16 +29,11 @@ import org.springframework.scheduling.annotation.Scheduled;
  */
 @Component
 public class Scheduler {
-
     private static final Logger log = LoggerFactory.getLogger(Scheduler.class);
-//    @Autowired
-//    private OilProductCalcService oilProductCalcService;    //产量计算
     @Autowired
     private OilWellDataCalcService oilWellDataCalcService;  //油井日报班报
     @Autowired
     private WaterWellDataCalcService waterWellDataCalcService;  //水井日报班报
-    @Autowired
-    private WetkSgtInsertService wetkSgtInsertService;      //威尔泰克功图数据写入
     @Autowired
     private WellInfoInsertService wellInfoInsertService;    //油井信息录入
     @Autowired
@@ -65,8 +54,6 @@ public class Scheduler {
     public static List<EndTag> youJingList;
     public static List<EndTag> shuiJingList;
     public static List<String> youCodeList = new ArrayList<>();
-    
-   
     
     /**
      * 测试你的方法，启动时运行
@@ -94,8 +81,6 @@ public class Scheduler {
 //        sgtAnalyzeService.sgtAnalyze();
 //        netCheckService.netChecking();
     }
-    
-
 
     private void init() {
         youJingList = endTagService.getByType(EndTagTypeEnum.YOU_JING.toString());
@@ -114,17 +99,8 @@ public class Scheduler {
     }
 
     /**
-     * 每隔10分钟定时任务
+     * 重新计算未计算的示功图
      */
-//    @Scheduled(cron = "0 0/10 * * * ? ")
-    private void hourly10Task() {
-        wetkSgtInsertService.wetkTask();     //威尔泰克功图数据写入
-//        oilProductCalcService.oilProductCalcTask();   //功图分析计算
-    }
-    /**
-     * 计算未监听到的示功图，后期程序稳定后删除该任务
-     */
-    
 //    @Scheduled(cron = "0 25 0/1 * * ? ")
     private void sgtCalc() {
         sgtAnalyzeService.sgtAnalyze(); 
@@ -170,7 +146,6 @@ public class Scheduler {
         Calendar c = Calendar.getInstance();
         scslService.calcOilWellScsj(c);
         scslService.calcWaterWellScsj(c);
-
     }
 
     /**
@@ -264,7 +239,5 @@ public class Scheduler {
     private void  shywkhTask(){					// 运维考核日报
     	 slytGljService.shywkh();
     }
-    
-    
     /*******************START 胜利油田局生产指标考核****************************************/
 }

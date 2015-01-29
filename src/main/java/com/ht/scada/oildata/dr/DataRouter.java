@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -19,6 +20,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +48,8 @@ public class DataRouter {
     private Connection con2;
     @Autowired
     private RealtimeDataService realtimeDataService;
-    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(100);
+    private Map<String, Map<String, String>> dataMap = new HashMap<>();
 
     private void dataRouter() {
         List<Map<String, Object>> taskList = null;
@@ -125,7 +128,6 @@ public class DataRouter {
                                 public void run() {
                                     log.info("执行——{}——任务", taskName);
 //                                    System.out.println(DateFormatUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
-
                                     Date date = new Date();
                                     try {
                                         if (hasUpdate > 0) {
@@ -144,7 +146,7 @@ public class DataRouter {
 
                                             } else {
                                                 insertData(insertSql, fieldList, recordList, date);
-                                                System.out.println("insert");
+                                                System.out.println(taskName + " :insert成功！ " + DateFormatUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
                                             }
                                         }
                                     } catch (Exception e) {
@@ -181,7 +183,7 @@ public class DataRouter {
     /**
      * 插入数据
      */
-    private void insertData(String sql, List<Map<String, Object>> fieldList, List<Map<String, Object>> recordList, Date date) {
+    private synchronized void insertData(String sql, List<Map<String, Object>> fieldList, List<Map<String, Object>> recordList, Date date) {
         con2 = sql2o2.beginTransaction();
         Query query = con2.createQuery(sql);
         int i = 0;
@@ -209,7 +211,7 @@ public class DataRouter {
                     case "":
                         String value = null;
                         if (gjz != null && !"".equals(gjz.trim())) {
-                            value = realtimeDataService.getEndTagVarInfo(code, gjz);
+                            value = getValue(code, gjz);
                         }
                         query.addParameter(zdmc, value);
                         break;
@@ -221,9 +223,9 @@ public class DataRouter {
                         break;
                     case "yjyxzt":  //油井运行状态
                         String zt = null;
-                        String s1 = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.RTU_RJ45_STATUS.toString().toLowerCase());
+                        String s1 = getValue(code, VarSubTypeEnum.RTU_RJ45_STATUS.toString().toLowerCase());
                         if ("true".equals(s1)) {
-                            String s2 = realtimeDataService.getEndTagVarInfo(code, VarSubTypeEnum.YOU_JING_YUN_XING.toString().toLowerCase());
+                            String s2 = getValue(code, VarSubTypeEnum.YOU_JING_YUN_XING.toString().toLowerCase());
                             if ("true".equals(s2)) {
                                 zt = "1";
                             } else {
@@ -238,7 +240,7 @@ public class DataRouter {
                     case "yx":
                         String yx = null;
                         if (gjz != null && !"".equals(gjz.trim())) {
-                            String v = realtimeDataService.getEndTagVarInfo(code, gjz);
+                            String v = getValue(code, gjz);
                             if ("true".equals(v)) {
                                 yx = "1";
                             } else if ("false".equals(v)) {
@@ -368,9 +370,9 @@ public class DataRouter {
     }
 
     private String getSnztG(String code) {
-        String s16 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wyyth_shi_neng_cgq16")) ? "1" : "0"; //一体化温压变
-        String s15 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_shi_neng_cgq15")) ? "1" : "0"; //智能电表
-        String s14 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "bpq_shi_neng_cgq14")) ? "1" : "0"; //变频器
+        String s16 = "true".equals(getValue(code, "wyyth_shi_neng_cgq16")) ? "1" : "0"; //一体化温压变
+        String s15 = "true".equals(getValue(code, "zndb_shi_neng_cgq15")) ? "1" : "0"; //智能电表
+        String s14 = "true".equals(getValue(code, "bpq_shi_neng_cgq14")) ? "1" : "0"; //变频器
         String s13 = "0"; //掺稀配水阀使能
         String s12 = "0"; //水套液位使能
         String s11 = "0"; //加热炉油温使能
@@ -382,19 +384,19 @@ public class DataRouter {
     private String getSnztD(String code) {
         String s8 = "0"; //汇管温度使能
         String s7 = "0"; //汇管压力使能
-        String s6 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_shi_neng_cgq6")) ? "1" : "0"; //套压使能
-        String s5 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yw_shi_neng_cgq5")) ? "1" : "0"; //油温使能
-        String s4 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yy_shi_neng_cgq4")) ? "1" : "0"; //油压使能
-        String s3 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wy_shi_neng_cgq3")) ? "1" : "0"; //位移使能
-        String s2 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zh_shi_neng_cgq2")) ? "1" : "0"; //载荷使能
-        String s1 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yth_shi_neng_cgq1")) ? "1" : "0"; //一体化载荷位移使能
+        String s6 = "true".equals(getValue(code, "ty_shi_neng_cgq6")) ? "1" : "0"; //套压使能
+        String s5 = "true".equals(getValue(code, "yw_shi_neng_cgq5")) ? "1" : "0"; //油温使能
+        String s4 = "true".equals(getValue(code, "yy_shi_neng_cgq4")) ? "1" : "0"; //油压使能
+        String s3 = "true".equals(getValue(code, "wy_shi_neng_cgq3")) ? "1" : "0"; //位移使能
+        String s2 = "true".equals(getValue(code, "zh_shi_neng_cgq2")) ? "1" : "0"; //载荷使能
+        String s1 = "true".equals(getValue(code, "yth_shi_neng_cgq1")) ? "1" : "0"; //一体化载荷位移使能
         return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
     }
 
     private String getZxztG(String code) {
-        String s16 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wyyth_zai_xian_cgq16")) ? "1" : "0"; //一体化温压变
-        String s15 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15")) ? "1" : "0"; //智能电表
-        String s14 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "bpq_zai_xian_cgq14")) ? "1" : "0"; //变频器
+        String s16 = "true".equals(getValue(code, "wyyth_zai_xian_cgq16")) ? "1" : "0"; //一体化温压变
+        String s15 = "true".equals(getValue(code, "zndb_zai_xian_cgq15")) ? "1" : "0"; //智能电表
+        String s14 = "true".equals(getValue(code, "bpq_zai_xian_cgq14")) ? "1" : "0"; //变频器
         String s13 = "0"; //掺稀配水阀
         String s12 = "0"; //水套液位
         String s11 = "0"; //加热炉油温
@@ -406,12 +408,12 @@ public class DataRouter {
     private String getZxztD(String code) {
         String s8 = "0"; //汇管温度
         String s7 = "0"; //汇管压力
-        String s6 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_zai_xian_cgq6")) ? "1" : "0"; //套压
-        String s5 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yw_zai_xian_cgq5")) ? "1" : "0"; //油温
-        String s4 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yy_zai_xian_cgq4")) ? "1" : "0"; //油压
-        String s3 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "wy_zai_xian_cgq3")) ? "1" : "0"; //位移
-        String s2 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "zh_zai_xian_cgq2")) ? "1" : "0"; //载荷
-        String s1 = "true".equals(realtimeDataService.getEndTagVarInfo(code, "yth_zai_xian_cgq1")) ? "1" : "0"; //一体化载荷位移
+        String s6 = "true".equals(getValue(code, "ty_zai_xian_cgq6")) ? "1" : "0"; //套压
+        String s5 = "true".equals(getValue(code, "yw_zai_xian_cgq5")) ? "1" : "0"; //油温
+        String s4 = "true".equals(getValue(code, "yy_zai_xian_cgq4")) ? "1" : "0"; //油压
+        String s3 = "true".equals(getValue(code, "wy_zai_xian_cgq3")) ? "1" : "0"; //位移
+        String s2 = "true".equals(getValue(code, "zh_zai_xian_cgq2")) ? "1" : "0"; //载荷
+        String s1 = "true".equals(getValue(code, "yth_zai_xian_cgq1")) ? "1" : "0"; //一体化载荷位移
         return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
     }
 
@@ -454,10 +456,18 @@ public class DataRouter {
                         end.set(Calendar.MINUTE, end.get(Calendar.MINUTE) + 1);
                         break;
                     case "minute":
-                        end.set(Calendar.HOUR_OF_DAY, end.get(Calendar.HOUR_OF_DAY) + 1);
+                        if (mm != null) {
+                            end.set(Calendar.HOUR_OF_DAY, end.get(Calendar.HOUR_OF_DAY) + 1);
+                        } else {
+                            end.set(Calendar.MINUTE, end.get(Calendar.MINUTE) + 1);
+                        }
                         break;
                     case "hour":
-                        end.set(Calendar.DAY_OF_MONTH, end.get(Calendar.DAY_OF_MONTH) + 1);
+                        if (hh != null) {
+                            end.set(Calendar.DAY_OF_MONTH, end.get(Calendar.DAY_OF_MONTH) + 1);
+                        } else {
+                            end.set(Calendar.HOUR_OF_DAY, end.get(Calendar.HOUR_OF_DAY) + 1);
+                        }
                         break;
                 }
             }
@@ -481,5 +491,23 @@ public class DataRouter {
             }
         }
         return end.getTime().getTime() - start.getTime().getTime();
+    }
+
+    private String getValue(String code, String gjz) {
+        String value;
+        try {
+            value = realtimeDataService.getEndTagVarInfo(code, gjz);
+            Map<String, String> secondMap = dataMap.get(code);
+            if (secondMap == null) {
+                secondMap = new HashMap<>();
+                dataMap.put(code, secondMap);
+            }
+            secondMap.put(gjz, value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error(code + ":" + gjz);
+            value = dataMap.get(code) == null ? null : dataMap.get(code).get(gjz);
+        }
+        return value;
     }
 }

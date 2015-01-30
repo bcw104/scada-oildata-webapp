@@ -370,6 +370,10 @@ public class DataRouter {
     }
 
     private String getSnztG(String code) {
+        return "0000000000000000";
+    }
+
+    private String getSnztD(String code) {
         String s16 = "true".equals(getValue(code, "wyyth_shi_neng_cgq16")) ? "1" : "0"; //一体化温压变
         String s15 = "true".equals(getValue(code, "zndb_shi_neng_cgq15")) ? "1" : "0"; //智能电表
         String s14 = "true".equals(getValue(code, "bpq_shi_neng_cgq14")) ? "1" : "0"; //变频器
@@ -378,10 +382,6 @@ public class DataRouter {
         String s11 = "0"; //加热炉油温使能
         String s10 = "0"; //烟囱温度使能
         String s9 = "0";  //储罐液位仪使能
-        return s16 + s15 + s14 + s13 + s12 + s11 + s10 + s9;
-    }
-
-    private String getSnztD(String code) {
         String s8 = "0"; //汇管温度使能
         String s7 = "0"; //汇管压力使能
         String s6 = "true".equals(getValue(code, "ty_shi_neng_cgq6")) ? "1" : "0"; //套压使能
@@ -390,10 +390,14 @@ public class DataRouter {
         String s3 = "true".equals(getValue(code, "wy_shi_neng_cgq3")) ? "1" : "0"; //位移使能
         String s2 = "true".equals(getValue(code, "zh_shi_neng_cgq2")) ? "1" : "0"; //载荷使能
         String s1 = "true".equals(getValue(code, "yth_shi_neng_cgq1")) ? "1" : "0"; //一体化载荷位移使能
-        return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
+        return s16 + s15 + s14 + s13 + s12 + s11 + s10 + s9 + s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
     }
 
     private String getZxztG(String code) {
+        return "0000000000000000";
+    }
+
+    private String getZxztD(String code) {
         String s16 = "true".equals(getValue(code, "wyyth_zai_xian_cgq16")) ? "1" : "0"; //一体化温压变
         String s15 = "true".equals(getValue(code, "zndb_zai_xian_cgq15")) ? "1" : "0"; //智能电表
         String s14 = "true".equals(getValue(code, "bpq_zai_xian_cgq14")) ? "1" : "0"; //变频器
@@ -402,10 +406,6 @@ public class DataRouter {
         String s11 = "0"; //加热炉油温
         String s10 = "0"; //烟囱温度
         String s9 = "0";  //储罐液位仪
-        return s16 + s15 + s14 + s13 + s12 + s11 + s10 + s9;
-    }
-
-    private String getZxztD(String code) {
         String s8 = "0"; //汇管温度
         String s7 = "0"; //汇管压力
         String s6 = "true".equals(getValue(code, "ty_zai_xian_cgq6")) ? "1" : "0"; //套压
@@ -414,7 +414,7 @@ public class DataRouter {
         String s3 = "true".equals(getValue(code, "wy_zai_xian_cgq3")) ? "1" : "0"; //位移
         String s2 = "true".equals(getValue(code, "zh_zai_xian_cgq2")) ? "1" : "0"; //载荷
         String s1 = "true".equals(getValue(code, "yth_zai_xian_cgq1")) ? "1" : "0"; //一体化载荷位移
-        return s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
+        return s16 + s15 + s14 + s13 + s12 + s11 + s10 + s9 + s8 + s7 + s6 + s5 + s4 + s3 + s2 + s1;
     }
 
     private long getDelay(String cron, String type) {

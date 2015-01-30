@@ -16,8 +16,15 @@ public interface SlytGljService {
     
     /**
      * 生产考核指标，更新函数 - 经营管理指标、系统运行指标
+     * 说明：多数参数来源于 源点库, 更新时间放到10:00以后
      */
     void runSckhzbUpdateTask();
+    
+    /**
+     * 生产考核指标，更新函数 - 经营管理指标、系统运行指标
+     * 说明：多数参数来源于 本地库, 更新时间放到 8:15以后
+     */
+    void runSckhzbUpdateTaskFromRealDate();
     
     /**
      * 四化运维考核

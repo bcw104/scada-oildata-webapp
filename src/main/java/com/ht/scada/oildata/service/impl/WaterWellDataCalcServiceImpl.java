@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.inject.Inject;
+import javax.inject.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
     private RealtimeDataService realtimeDataService;
     @Inject
     protected Sql2o sql2o;
+    @Inject
+    @Named("sql2o2")
+    protected Sql2o sql2o2;
 
     public Sql2o getSql2o() {
         return sql2o;
@@ -473,11 +477,18 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
                 }
 
 
-                String jzrSql = "Insert into QYSCZH.SJS_SS_PSFZ "
+//                String jzrSql = "Insert into QYSCZH.SJS_SS_PSFZ "
+//                        + "(SBMC, YL, WD, SSLL, LJLL, FMZT, KD, PZL, GXYL, CJSJ, ZCSJ, SFBL) "
+//                        + "values (:SBMC, :YL, :WD, :SSLL, :LJLL, :FMZT, :KD, :PZL, :GXYL, :CJSJ, :ZCSJ, :SFBL)";
+//
+//                try (Connection con = sql2o.open()) {
+                
+                String jzrSql = "Insert into QYSCZH.SSZC_PSFZ "
                         + "(SBMC, YL, WD, SSLL, LJLL, FMZT, KD, PZL, GXYL, CJSJ, ZCSJ, SFBL) "
                         + "values (:SBMC, :YL, :WD, :SSLL, :LJLL, :FMZT, :KD, :PZL, :GXYL, :CJSJ, :ZCSJ, :SFBL)";
 
-                try (Connection con = sql2o.open()) {
+                try (Connection con = sql2o2.open()) {
+                
                     con.createQuery(jzrSql)
                             .addParameter("SBMC", code) //井号
                             .addParameter("YL", YL)//压力

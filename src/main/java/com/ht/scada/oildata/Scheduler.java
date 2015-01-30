@@ -155,6 +155,7 @@ public class Scheduler {
      * 写入配水阀组数据
      */
 //    @Scheduled(cron = "0 0/5 * * * ? ")
+    @Scheduled(cron = "0 0/1 * * * ? ")
     private void minite5Task() {
         waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
     }

@@ -3,6 +3,7 @@ package com.ht.scada.oildata;
 import com.ht.scada.common.tag.entity.EndTag;
 import com.ht.scada.common.tag.service.EndTagService;
 import com.ht.scada.common.tag.util.EndTagTypeEnum;
+import com.ht.scada.oildata.dr.DataRouter;
 import com.ht.scada.oildata.service.CommonScdtService;
 import com.ht.scada.oildata.service.NetCheckService;
 import com.ht.scada.oildata.service.OilWellDataCalcService;
@@ -12,12 +13,13 @@ import com.ht.scada.oildata.service.SgtAnalyzeService;
 import com.ht.scada.oildata.service.SlytGljService;
 import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -75,9 +77,10 @@ public class Scheduler {
 //        qkOilWellRecordService.runQjRiBaoTask();
 //        qkOilWellRecordService.runSjRiBaoTask();
 //        commonScdtService.test();
-//          slytGljService.runSckhzbTask();
+//        slytGljService.runSckhzbTask();
 //        slytGljService.runSckhzbUpdateTask();
-//          slytGljService.shywkh();
+//        slytGljService.runSckhzbUpdateTaskFromRealDate();
+//        slytGljService.shywkh();
 //        sgtAnalyzeService.sgtAnalyze();
 //        netCheckService.netChecking();
     }
@@ -225,17 +228,22 @@ public class Scheduler {
     /*******************END 桥口定时任务****************************************/
     
     /*******************START 胜利油田局生产指标考核****************************************/
-    @Scheduled(cron = "0 50 6 * * ? ")
+//    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
         slytGljService.runSckhzbTask();
     }
     
-  @Scheduled(cron = "0 0 10 * * ? ")
+//  @Scheduled(cron = "0 0 10 * * ? ")
     private void sczbkhupdateTask() {
     	slytGljService.runSckhzbUpdateTask();
     }
     
-    @Scheduled(cron = "0 0/15 * * * ? ")
+//    @Scheduled(cron = "0 15 8 * * ? ")
+    private void sczbkhupdateTaskReal() {
+    	slytGljService.runSckhzbUpdateTaskFromRealDate();
+    }
+    
+//    @Scheduled(cron = "0 0/15 * * * ? ")
     private void  shywkhTask(){					// 运维考核日报
     	 slytGljService.shywkh();
     }

@@ -42,11 +42,10 @@ public class YouJingSbdazc implements Runnable {
 
     @Override
     public void run() {
-    	
     	// 插入语句
     	String insertSqlStr = "insert into  QYSCZH.sjc_ss_sb "
-    			+ "(SBBM, YBLX, CJSJ, YBDM, CJDM, ZDLC1, ZXLC1, XSWS1, ZDLC2, ZXLC2, XSWS2, ZDLC3, ZXLC3, XSWS3, CC_N, CC_Y, CC_R, TJLC, XIH1, XIH2, XIH3, XUH1, XUH2, QDDM, SYDL, DDLBS, YXSJ_G, YXSJ_D) "
-    			+ "values (:SBBM, :YBLX, :CJSJ, :YBDM, :CJDM, :ZDLC1, :ZXLC1, :XSWS1, :ZDLC2, :ZXLC2, :XSWS2, :ZDLC3, :ZXLC3, :XSWS3, :CC_N, :CC_Y, :CC_R, :TJLC, :XIH1, :XIH2, :XIH3, :XUH1, :XUH2, :QDDM, :SYDL, :DDLBS, :YXSJ_G, :YXSJ_D)";
+    			+ "(SBBM, YBLX, CJSJ, YBDM, CJDM, ZDLC1, ZXLC1, XSWS1, ZDLC2, ZXLC2, XSWS2, ZDLC3, ZXLC3, XSWS3, CC_N, CC_Y, CC_R, TJLC, XIH1, XIH2, XIH3, XUH1, XUH2, QDDM, SYDL, DDLBS, YXSJ_G, YXSJ_D, YXSJ) "
+    			+ "values (:SBBM, :YBLX, :CJSJ, :YBDM, :CJDM, :ZDLC1, :ZXLC1, :XSWS1, :ZDLC2, :ZXLC2, :XSWS2, :ZDLC3, :ZXLC3, :XSWS3, :CC_N, :CC_Y, :CC_R, :TJLC, :XIH1, :XIH2, :XIH3, :XUH1, :XUH2, :QDDM, :SYDL, :DDLBS, :YXSJ_G, :YXSJ_D, :YXSJ)";
     	
     	Connection con2 = sql2o.beginTransaction();	
     	Query query = con2.createQuery(insertSqlStr);
@@ -84,6 +83,7 @@ public class YouJingSbdazc implements Runnable {
     	    	Float DDLBS = null;			// 电池低电量标示:1代表低电量，0代表高电量
     	    	String YXSJ_G = "";			// 运行时间（高字）
     	    	String YXSJ_D = "";			// 运行时间（低字）
+    	    	Float YXSJ = null;			// 运行时间（存储运行时间最终结果）
     			
     			// 相关参数设置---------------------------------------------------------------------------------------------------------------------------------
     			SBBM = (String)recordList.get(i).get("jlmc");							// 设备编码：井号、泵编码、罐编码等
@@ -94,8 +94,8 @@ public class YouJingSbdazc implements Runnable {
                 	if ( yblxm == 1 || yblxm == 2 || yblxm == 3 || yblxm == 4 || yblxm == 5 || yblxm == 6 || yblxm == 14 || yblxm == 15 || yblxm == 16 ) {	
 
         				// 获得相关值
-                    	YBDM = getFloatValue(SBBM, "she_bei_dai_ma_cgq" + yblxm) + "";			// 仪表代码，即RTU中设备代码。	实时库Key:she_bei_dai_ma_cgqX
-                    	CJDM = getFloatValue(SBBM, "chang_jia_dai_ma_cgq" + yblxm) + "";		// 厂家代码，即RTU中厂家代码。	实时库Key:chang_jia_dai_ma_cgqX
+                    	YBDM = getFloatValue(SBBM, "she_bei_dai_ma_cgq" + yblxm) == null ? null : (getFloatValue(SBBM, "she_bei_dai_ma_cgq" + yblxm) + "");			// 仪表代码，即RTU中设备代码。	实时库Key:she_bei_dai_ma_cgqX
+                    	CJDM = getFloatValue(SBBM, "chang_jia_dai_ma_cgq" + yblxm) ==null ? null : ( getFloatValue(SBBM, "chang_jia_dai_ma_cgq" + yblxm) + "");		// 厂家代码，即RTU中厂家代码。	实时库Key:chang_jia_dai_ma_cgqX
                     	CC_N = getFloatValue(SBBM, "chu_chang_nian_cgq" + yblxm);				// 出厂年份							 chu_chang_nian_cgqX
                     	CC_Y = getFloatValue(SBBM, "chu_chang_yue_cgq" + yblxm);				// 出厂月份							 chu_chang_yue_cgqX
                     	CC_R = getFloatValue(SBBM, "chu_chang_ri_cgq" + yblxm);					// 出厂日							 chu_chang_ri_cgqX
@@ -107,7 +107,8 @@ public class YouJingSbdazc implements Runnable {
                     	XUH2 = getFloatValue(SBBM, "xu_hao2_cgq" + yblxm);						// 产品序列号 -- 序号2					 xu_hao2_cgqX
                     	SYDL = getFloatValue(SBBM, "cgq_remained_dianliang_cgq" + yblxm);		// 电池剩余电量百分比					 cgq_remained_dianliang_cgqX
                     	YXSJ_G = null;															// 运行时间（高字）					 cgq_rtu_time_cgqX
-                    	YXSJ_D = getFloatValue(SBBM, "cgq_rtu_time_cgq" + yblxm) + "";			// 运行时间（低字）					  暂定写到低字
+                    	YXSJ_D = null;															// 运行时间（低字）					  
+                    	YXSJ = getFloatValue(SBBM, "cgq_rtu_time_cgq" + yblxm);					// 运行时间
                     	
                     	String ddlbStr = realtimeDataService.getEndTagVarInfo(SBBM, dianChiBiaoShiArray[yblxm-1]);	// 电池低电量标示:1代表低电量，0代表高电量。实时库Key:详见数组
                     	if ( ddlbStr == null ) {
@@ -149,8 +150,8 @@ public class YouJingSbdazc implements Runnable {
         			
                 	} else if ( yblxm == 18 ) {	// RTU
                 		
-                		YBDM = getFloatValue(SBBM, "rtu_she_bei_dai_ma") + "";		// 仪表代码，即RTU中设备代码。	实时库Key:rtu_she_bei_dai_ma
-                    	CJDM = getFloatValue(SBBM, "rtu_chang_jia_dai_ma") + "";	// 厂家代码，即RTU中厂家代码。	实时库Key:rtu_chang_jia_dai_ma
+                		YBDM = getFloatValue(SBBM, "rtu_she_bei_dai_ma") == null ? null : ( getFloatValue(SBBM, "rtu_she_bei_dai_ma") + "" );		// 仪表代码，即RTU中设备代码。	实时库Key:rtu_she_bei_dai_ma
+                    	CJDM = getFloatValue(SBBM, "rtu_chang_jia_dai_ma") == null ? null: ( getFloatValue(SBBM, "rtu_chang_jia_dai_ma") + "" );	// 厂家代码，即RTU中厂家代码。	实时库Key:rtu_chang_jia_dai_ma
                     	CC_N = getFloatValue(SBBM, "rtu_chu_chang_nian");			// 出厂年份							 rtu_chu_chang_nian
                     	CC_Y = getFloatValue(SBBM, "rtu_chu_chang_yue");			// 出厂月份							 rtu_chu_chang_yue
                     	CC_R = getFloatValue(SBBM, "rtu_chu_chang_ri");				// 出厂日							 rtu_chu_chang_ri
@@ -199,6 +200,7 @@ public class YouJingSbdazc implements Runnable {
         			.addParameter("DDLBS", DDLBS)
         			.addParameter("YXSJ_G", YXSJ_G)
         			.addParameter("YXSJ_D", YXSJ_D)
+        			.addParameter("YXSJ", YXSJ)
         			.addToBatch();
             		
             	} catch (Exception e1) {
@@ -213,12 +215,11 @@ public class YouJingSbdazc implements Runnable {
     			e1.printStackTrace();
     		}
     		
-    		
-//    		System.out.println("油井： " + (String)recordList.get(i).get("jlmc") + " 相关设备信息插入完毕！");
+    		System.out.println(i + ": 油井： " + (String)recordList.get(i).get("jlmc") + " 相关设备信息插入完毕！");
     	} // endOuterFor...
     	
     	try{
-    		con2.commit();				// 批量提交
+    		con2.commit();					// 批量提交
     	} catch(Exception e1) {
 			e1.printStackTrace();
 		}
@@ -234,10 +235,10 @@ public class YouJingSbdazc implements Runnable {
      */
     public Float getFloatValue (String code, String varName) {
     	Float temp = null;
+    	
     	String tempStr = realtimeDataService.getEndTagVarInfo(code, varName);
-    	//System.out.println("实际值为： " + tempStr);
     
-    	if ( tempStr !=null && isNumeric(tempStr) ) {
+    	if ( tempStr !=null && !tempStr.equals("null") && isNumeric(tempStr) ) {	// 防止输出‘null’
     		temp = Float.parseFloat(tempStr);
     	}
     	

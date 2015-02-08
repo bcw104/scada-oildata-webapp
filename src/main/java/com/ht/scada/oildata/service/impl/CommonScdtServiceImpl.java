@@ -515,7 +515,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             for (Map<String, Object> map : list) {
                 try {
                     String code = (String) map.get("bjd");
-                    Date date = (Date) map.get("bjsj");
+                    Date date = (Date) map.get("bgsj");
                     String bjxx = (String) map.get("bjxx");
                     String xx1 = ((BigDecimal) map.get("xx1")).toString();
                     String yz = ((BigDecimal) map.get("yz")).toString();

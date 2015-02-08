@@ -61,189 +61,194 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
         log.info("水井班报录入开始——现在时刻：" + CommonUtils.date2String(new Date()));
         if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
             for (EndTag shuiJing : Scheduler.shuiJingList) {
-                String code = shuiJing.getCode();
-                String sql = "insert into T_Water_Well_Hourly_Data "
-                        + "(ID, CODE, PSJ, SAVE_TIME, DATE_TIME, YXSJ, LJYXSJ, GY, ZRYL, SSLL, LLSD, RPZL, ZSL, LJZSL, CQL, SJD)"
-                        + "values (:ID, :CODE, :PSJ, :SAVE_TIME, :DATE_TIME, :YXSJ, :LJYXSJ, :GY, :ZRYL, :SSLL, :LLSD, :RPZL, :ZSL, :LJZSL, :CQL, :SJD)";
-                //Oracle
-                String PSJ = shuiJing.getParent() == null ? "—" : shuiJing.getParent().getName();
-                //计算
-                Float CQL = 0f, ZSL = 0f, LJZSL = 0f;
-                //实时库数据
-                Float GY = null, ZRYL = null, SSLL = null, LJLL = null, LLSD = null;
-                //源头库数据
-                Float RPZL = null;
-                //程序处理
-                String SJD;
-
-                //源头库数据
-                Map<String, Object> map = findDataFromYdkByCode(code);
-                if (map != null) {
-                    RPZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString());
-                }
-
-                //实时库数据
                 try {
-                    String extConfigInfo = shuiJing.getExtConfigInfo();		// 获得扩展信息 
-                    if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
-                        String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
-                        for (String varName : framesLine) {
-                            //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
-                            if (varName.contains("yx|") || varName.contains("yc|")) {
-                                String varNames[] = varName.trim().split("\\|");
-                                String varName1 = varNames[1];
-                                String codeName = varNames[2];
-                                String varNameStr = varNames[3];
-                                if (varName1.contains("zsyl-")) { // 注水压力
-                                    String zsylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (zsylValue != null) {
-                                        ZRYL = CommonUtils.formatFloat(Float.parseFloat(zsylValue), 2);
-                                    }
-                                } else if (varName1.contains("ljll")) { // 累计流量
-                                    String ljllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (ljllValue != null) {
-                                        LJLL = CommonUtils.formatFloat(Float.parseFloat(ljllValue), 2);
-                                    }
-                                } else if (varName1.contains("shll")) { // 瞬时流量
-                                    String ssllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (ssllValue != null) {
-                                        SSLL = CommonUtils.formatFloat(Float.parseFloat(ssllValue), 2);
-                                    }
-                                }
-                            }
-                        }
+                    String code = shuiJing.getCode();
+                    String sql = "insert into T_Water_Well_Hourly_Data "
+                            + "(ID, CODE, PSJ, SAVE_TIME, DATE_TIME, YXSJ, LJYXSJ, GY, ZRYL, SSLL, LLSD, RPZL, ZSL, LJZSL, CQL, SJD)"
+                            + "values (:ID, :CODE, :PSJ, :SAVE_TIME, :DATE_TIME, :YXSJ, :LJYXSJ, :GY, :ZRYL, :SSLL, :LLSD, :RPZL, :ZSL, :LJZSL, :CQL, :SJD)";
+                    //Oracle
+                    String PSJ = shuiJing.getParent() == null ? "—" : shuiJing.getParent().getName();
+                    //计算
+                    Float CQL = 0f, ZSL = 0f, LJZSL = 0f;
+                    //实时库数据
+                    Float GY = null, ZRYL = null, SSLL = null, LJLL = null, LLSD = null;
+                    //源头库数据
+                    Float RPZL = null;
+                    //程序处理
+                    String SJD;
+
+                    //源头库数据
+                    Map<String, Object> map = findDataFromYdkByCode(code);
+                    if (map != null) {
+                        RPZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString());
                     }
 
-                } catch (Exception e) {
-                    log.info(code + ":" + e.toString());
-                }
-
-//                if (shuiJing.getParent() != null) {  //干压
-//                    GY = getRealData(shuiJing.getParent().getCode(), "gxyl");
-//                }
-                //获取干线压力
-                String extConfigInfo = null;
-                if (shuiJing.getParent() != null) {
-                    extConfigInfo = shuiJing.getParent().getExtConfigInfo();// 获取配水间值 
-                } else {//单井水井
-                    extConfigInfo = shuiJing.getExtConfigInfo();// 获取配水间值 
-                }
-                try {
-                    if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
-                        String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
-                        for (String varName : framesLine) {
-                            //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
-                            if (varName.contains("yc|")) {
-                                String varNames[] = varName.trim().split("\\|");
-                                String varName1 = varNames[1];
-                                String codeName = varNames[2];
-                                String varNameStr = varNames[3];
-                                if (varName1.contains("gxyl-")) { // 干线压力
-                                    String gxylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
-                                    if (gxylValue != null) {
-                                        GY = CommonUtils.formatFloat(Float.parseFloat(gxylValue), 2);
-                                        if(GY<=0.1) {   //处理干压为0影响统计数据
-                                            GY = null;
+                    //实时库数据
+                    try {
+                        String extConfigInfo = shuiJing.getExtConfigInfo();		// 获得扩展信息 
+                        if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
+                            String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
+                            for (String varName : framesLine) {
+                                //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
+                                if (varName.contains("yx|") || varName.contains("yc|")) {
+                                    String varNames[] = varName.trim().split("\\|");
+                                    String varName1 = varNames[1];
+                                    String codeName = varNames[2];
+                                    String varNameStr = varNames[3];
+                                    if (varName1.contains("zsyl-")) { // 注水压力
+                                        String zsylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                        if (zsylValue != null) {
+                                            ZRYL = CommonUtils.formatFloat(Float.parseFloat(zsylValue), 2);
+                                        }
+                                    } else if (varName1.contains("ljll")) { // 累计流量
+                                        String ljllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                        if (ljllValue != null) {
+                                            LJLL = CommonUtils.formatFloat(Float.parseFloat(ljllValue), 2);
+                                        }
+                                    } else if (varName1.contains("shll")) { // 瞬时流量
+                                        String ssllValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                        if (ssllValue != null) {
+                                            SSLL = CommonUtils.formatFloat(Float.parseFloat(ssllValue), 2);
                                         }
                                     }
                                 }
                             }
                         }
+
+                    } catch (Exception e) {
+                        log.info(code + ":" + e.toString());
                     }
 
-                } catch (Exception e) {
-                    log.info(code + ":" + e.toString());
-                }
-
-                //计算
-                //上一班累积注水量
-                String rtLjzsl = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJZSL.toString());
-                Float banLJZSL = rtLjzsl == null ? 0f : Float.valueOf(rtLjzsl);
-                if (LJLL != null) {
-                    String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_ZSLJLL.toString());
-                    if (zeroNum != null) {
-                        LJZSL = LJLL - Float.valueOf(zeroNum);
-                        ZSL = LJZSL - banLJZSL;
+//                if (shuiJing.getParent() != null) {  //干压
+//                    GY = getRealData(shuiJing.getParent().getCode(), "gxyl");
+//                }
+                    //获取干线压力
+                    String extConfigInfo = null;
+                    if (shuiJing.getParent() != null) {
+                        extConfigInfo = shuiJing.getParent().getExtConfigInfo();// 获取配水间值 
+                    } else {//单井水井
+                        extConfigInfo = shuiJing.getExtConfigInfo();// 获取配水间值 
                     }
-                    //更新班累积耗电量
-                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), String.valueOf(LJZSL));
-                } else {    //读不上来累积流量
-                    LJZSL = banLJZSL;
-                    //更新班累积耗电量
-                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), String.valueOf(LJZSL));
-                }
-                
-                if (LJZSL != null && RPZL != null) {
-                    CQL = LJZSL - RPZL;
-                }
+                    try {
+                        if (extConfigInfo != null && !"".equals(extConfigInfo.trim())) {
+                            String[] framesLine = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");// 替换字符串									
+                            for (String varName : framesLine) {
+                                //yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl 
+                                if (varName.contains("yc|")) {
+                                    String varNames[] = varName.trim().split("\\|");
+                                    String varName1 = varNames[1];
+                                    String codeName = varNames[2];
+                                    String varNameStr = varNames[3];
+                                    if (varName1.contains("gxyl-")) { // 干线压力
+                                        String gxylValue = realtimeDataService.getEndTagVarInfo(codeName, varNameStr);
+                                        if (gxylValue != null) {
+                                            GY = CommonUtils.formatFloat(Float.parseFloat(gxylValue), 2);
+                                            if (GY <= 0.1) {   //处理干压为0影响统计数据
+                                                GY = null;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                //***************************开始  计算运行时间****************
-                Float YXSJ = getYxsj(code);
-                //上一班累积值
-                String rtLjyxsj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
-                float ljyxsjValue = rtLjyxsj == null ? 0f : Float.valueOf(rtLjyxsj);
-                Float LJYXSJ = ljyxsjValue + YXSJ;
+                    } catch (Exception e) {
+                        log.info(code + ":" + e.toString());
+                    }
 
-                float scsj = 0;
-                try {
-                    int hour1 = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
-                    float minite = YXSJ % 60;
-                    scsj = hour1 + minite / 100;
+                    //计算
+                    //上一班累积注水量
+                    String rtLjzsl = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJZSL.toString());
+                    Float banLJZSL = rtLjzsl == null ? 0f : Float.valueOf(rtLjzsl);
+                    if (LJLL != null) {
+                        String zeroNum = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.RI_LINGSHI_ZSLJLL.toString());
+                        if (zeroNum != null) {
+                            LJZSL = LJLL - Float.valueOf(zeroNum);
+                            ZSL = LJZSL - banLJZSL;
+                        }
+                        //更新班累积耗电量
+                        realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), String.valueOf(LJZSL));
+                    } else {    //读不上来累积流量
+                        LJZSL = banLJZSL;
+                        //更新班累积耗电量
+                        realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), String.valueOf(LJZSL));
+                    }
+
+                    if (LJZSL != null && RPZL != null) {
+                        CQL = LJZSL - RPZL;
+                    }
+
+                    //***************************开始  计算运行时间****************
+                    Float YXSJ = getYxsj(code);
+                    //上一班累积值
+                    String rtLjyxsj = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
+                    float ljyxsjValue = rtLjyxsj == null ? 0f : Float.valueOf(rtLjyxsj);
+                    Float LJYXSJ = ljyxsjValue + YXSJ;
+
+                    float scsj = 0;
+                    try {
+                        int hour1 = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
+                        float minite = YXSJ % 60;
+                        scsj = hour1 + minite / 100;
+                    } catch (Exception e) {
+                    }
+
+                    float ljscsj = 0;
+                    try {
+                        int hour2 = LJYXSJ == null ? 0 : (LJYXSJ.intValue() / 60);
+                        float minite2 = LJYXSJ % 60;
+                        ljscsj = hour2 + minite2 / 100;
+                    } catch (Exception e) {
+                    }
+
+                    //更新运行时间
+                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), String.valueOf(LJYXSJ));
+                    //***************************结束  计算运行时间****************
+
+                    //程序处理
+                    Calendar c = Calendar.getInstance();
+                    c.set(Calendar.MINUTE, 0);
+                    c.set(Calendar.SECOND, 0);
+                    c.set(Calendar.MILLISECOND, 0);
+                    int hour = c.get(Calendar.HOUR_OF_DAY);
+
+                    if (hour % 2 != 0) {
+                        c.set(Calendar.HOUR_OF_DAY, hour + 1);
+                    } else {
+                        c.set(Calendar.HOUR_OF_DAY, hour);
+                    }
+                    SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
+
+                    //最后一班写入注水累积流量值
+                    if (SJD.equals("8:00")) {
+                        realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_ZSLJLL.toString(), LJLL == null ? "0" : String.valueOf(LJLL));
+                    }
+
+                    try (Connection con = sql2o.open()) {
+                        con.createQuery(sql) //
+                                .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //ID
+                                .addParameter("CODE", code) //井号
+                                .addParameter("PSJ", PSJ) //配水间
+                                .addParameter("SAVE_TIME", new Date())//转储时间
+                                .addParameter("DATE_TIME", c.getTime())//数据时间
+                                .addParameter("YXSJ", scsj)//运行时间
+                                .addParameter("LJYXSJ", ljscsj)//累积运行时间
+                                .addParameter("GY", GY)//干压
+                                .addParameter("ZRYL", ZRYL)//注入压力
+                                .addParameter("SSLL", SSLL)//瞬时流量
+                                .addParameter("LLSD", LLSD)//流量设定值
+                                .addParameter("RPZL", RPZL)//日配注量
+                                .addParameter("ZSL", ZSL)//注水量
+                                .addParameter("LJZSL", LJZSL)//日累积注水量
+                                .addParameter("CQL", CQL)//超欠量
+                                .addParameter("SJD", SJD)//时间段
+                                .executeUpdate();
+                    } catch (Exception e) {
+                        log.info("处理水井：" + code + "出现异常！" + e.toString());
+                        continue;
+                    }
                 } catch (Exception e) {
-                }
-
-                float ljscsj = 0;
-                try {
-                    int hour2 = LJYXSJ == null ? 0 : (LJYXSJ.intValue() / 60);
-                    float minite2 = LJYXSJ % 60;
-                    ljscsj = hour2 + minite2 / 100;
-                } catch (Exception e) {
-                }
-
-                //更新运行时间
-                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), String.valueOf(LJYXSJ));
-                //***************************结束  计算运行时间****************
-
-                //程序处理
-                Calendar c = Calendar.getInstance();
-                c.set(Calendar.MINUTE, 0);
-                c.set(Calendar.SECOND, 0);
-                c.set(Calendar.MILLISECOND, 0);
-                int hour = c.get(Calendar.HOUR_OF_DAY);
-
-                if (hour % 2 != 0) {
-                    c.set(Calendar.HOUR_OF_DAY, hour + 1);
-                } else {
-                    c.set(Calendar.HOUR_OF_DAY, hour);
-                }
-                SJD = String.valueOf(c.get(Calendar.HOUR_OF_DAY)) + ":00";
-
-                //最后一班写入注水累积流量值
-                if (SJD.equals("8:00")) {
-                    realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_ZSLJLL.toString(), LJLL == null ? "0" : String.valueOf(LJLL));
-                }
-
-                try (Connection con = sql2o.open()) {
-                    con.createQuery(sql) //
-                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //ID
-                            .addParameter("CODE", code) //井号
-                            .addParameter("PSJ", PSJ) //配水间
-                            .addParameter("SAVE_TIME", new Date())//转储时间
-                            .addParameter("DATE_TIME", c.getTime())//数据时间
-                            .addParameter("YXSJ", scsj)//运行时间
-                            .addParameter("LJYXSJ", ljscsj)//累积运行时间
-                            .addParameter("GY", GY)//干压
-                            .addParameter("ZRYL", ZRYL)//注入压力
-                            .addParameter("SSLL", SSLL)//瞬时流量
-                            .addParameter("LLSD", LLSD)//流量设定值
-                            .addParameter("RPZL", RPZL)//日配注量
-                            .addParameter("ZSL", ZSL)//注水量
-                            .addParameter("LJZSL", LJZSL)//日累积注水量
-                            .addParameter("CQL", CQL)//超欠量
-                            .addParameter("SJD", SJD)//时间段
-                            .executeUpdate();
-                } catch (Exception e) {
-                    log.info("处理水井：" + code + "出现异常！" + e.toString());
+                    log.error(e.toString());
                     continue;
                 }
             }
@@ -257,120 +262,123 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
         if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
             for (EndTag shuiJing : Scheduler.shuiJingList) {
                 String code = shuiJing.getCode();
-
-                String sql = "insert into T_Water_Well_Daily_Data "
-                        + "(ID, CODE, PSJ, SAVE_TIME, DATE_TIME, YXSJ, GY, ZRYL, YY, TY, RPZL, LJZSL, CQL)"
-                        + "values (:ID, :CODE, :PSJ, :SAVE_TIME, :DATE_TIME, :YXSJ, :GY, :ZRYL, :YY, :TY, :RPZL, :LJZSL, :CQL)";
-                //Oracle
-                String PSJ = shuiJing.getParent() == null ? "—" : shuiJing.getParent().getName();
-                //计算
-                Float YXSJ = null, CQL = null, LJZSL = null;
-                //实时库数据
-                Float GY = null, ZRYL = null, TY = null;
-                //源头库数据
-                Float RPZL = null;
-
-
-                //源头库数据
-                Map<String, Object> map = findDataFromYdkByCode(code);
-                if (map != null) {
-                    RPZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString());
-                }
-
-                String rtYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
-                String rtZSL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJZSL.toString());
-
-                YXSJ = rtYXSJ == null ? null : Float.valueOf(rtYXSJ);
-                LJZSL = rtZSL == null ? null : Float.valueOf(rtZSL);
-
-                //计算
-                if (LJZSL != null && RPZL != null) {
-                    CQL = LJZSL - RPZL;
-                }
-                //求平均值
-                Calendar startTime = Calendar.getInstance();
-                Calendar endTime = Calendar.getInstance();
-                startTime.set(Calendar.MINUTE, 0);
-                startTime.set(Calendar.SECOND, 0);
-                startTime.set(Calendar.MILLISECOND, 0);
-                startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
-                startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
-                endTime.set(Calendar.MINUTE, 0);
-                endTime.set(Calendar.SECOND, 0);
-                endTime.set(Calendar.MILLISECOND, 0);
-                endTime.set(Calendar.HOUR_OF_DAY, endTime.get(Calendar.HOUR_OF_DAY) + 1);
-                Map<String, Object> dayMap = getAvgDailyData(code, startTime.getTime(), endTime.getTime());
-                if (dayMap != null) {
-                    GY = dayMap.get("gy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("gy")).toString());
-                    ZRYL = dayMap.get("zryl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zryl")).toString());
-                }
-
-                Calendar c = Calendar.getInstance();
-                c.set(Calendar.MINUTE, 0);
-                c.set(Calendar.SECOND, 0);
-                c.set(Calendar.MILLISECOND, 0);
-                c.set(Calendar.HOUR_OF_DAY, 0);
-
-                //23.55以上认为是24
-                if (YXSJ != null && YXSJ >= 1435) {
-                    YXSJ = 1440f;
-                }
-
-                float scsj = 0;
                 try {
-                    int hour = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
-                    float minite = YXSJ % 60;
-                    scsj = hour + minite / 100;
-                } catch (Exception e) {
-                }
+                    String sql = "insert into T_Water_Well_Daily_Data "
+                            + "(ID, CODE, PSJ, SAVE_TIME, DATE_TIME, YXSJ, GY, ZRYL, YY, TY, RPZL, LJZSL, CQL)"
+                            + "values (:ID, :CODE, :PSJ, :SAVE_TIME, :DATE_TIME, :YXSJ, :GY, :ZRYL, :YY, :TY, :RPZL, :LJZSL, :CQL)";
+                    //Oracle
+                    String PSJ = shuiJing.getParent() == null ? "—" : shuiJing.getParent().getName();
+                    //计算
+                    Float YXSJ = null, CQL = null, LJZSL = null;
+                    //实时库数据
+                    Float GY = null, ZRYL = null, TY = null;
+                    //源头库数据
+                    Float RPZL = null;
 
-                try (Connection con = sql2o.open()) {
-                    con.createQuery(sql) //
-                            .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
-                            .addParameter("CODE", code) //
-                            .addParameter("PSJ", PSJ) //配水间
-                            .addParameter("SAVE_TIME", new Date())//
-                            .addParameter("DATE_TIME", c.getTime())//
-                            .addParameter("YXSJ", scsj)//运行时间
-                            .addParameter("GY", GY)//干压
-                            .addParameter("ZRYL", ZRYL)//注入压力
-                            .addParameter("YY", ZRYL)//油压
-                            .addParameter("TY", TY)//套压
-                            .addParameter("RPZL", RPZL)//日配注量
-                            .addParameter("LJZSL", LJZSL)//日累积注水量
-                            .addParameter("CQL", CQL)//超欠量
-                            .executeUpdate();//
+                    //源头库数据
+                    Map<String, Object> map = findDataFromYdkByCode(code);
+                    if (map != null) {
+                        RPZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString());
+                    }
+
+                    String rtYXSJ = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJYXSJ.toString());
+                    String rtZSL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJZSL.toString());
+
+                    YXSJ = rtYXSJ == null ? null : Float.valueOf(rtYXSJ);
+                    LJZSL = rtZSL == null ? null : Float.valueOf(rtZSL);
+
+                    //计算
+                    if (LJZSL != null && RPZL != null) {
+                        CQL = LJZSL - RPZL;
+                    }
+                    //求平均值
+                    Calendar startTime = Calendar.getInstance();
+                    Calendar endTime = Calendar.getInstance();
+                    startTime.set(Calendar.MINUTE, 0);
+                    startTime.set(Calendar.SECOND, 0);
+                    startTime.set(Calendar.MILLISECOND, 0);
+                    startTime.set(Calendar.HOUR_OF_DAY, startTime.get(Calendar.HOUR_OF_DAY) + 1);
+                    startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
+                    endTime.set(Calendar.MINUTE, 0);
+                    endTime.set(Calendar.SECOND, 0);
+                    endTime.set(Calendar.MILLISECOND, 0);
+                    endTime.set(Calendar.HOUR_OF_DAY, endTime.get(Calendar.HOUR_OF_DAY) + 1);
+                    Map<String, Object> dayMap = getAvgDailyData(code, startTime.getTime(), endTime.getTime());
+                    if (dayMap != null) {
+                        GY = dayMap.get("gy") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("gy")).toString());
+                        ZRYL = dayMap.get("zryl") == null ? null : Float.parseFloat(((BigDecimal) dayMap.get("zryl")).toString());
+                    }
+
+                    Calendar c = Calendar.getInstance();
+                    c.set(Calendar.MINUTE, 0);
+                    c.set(Calendar.SECOND, 0);
+                    c.set(Calendar.MILLISECOND, 0);
+                    c.set(Calendar.HOUR_OF_DAY, 0);
+
+                    //23.55以上认为是24
+                    if (YXSJ != null && YXSJ >= 1435) {
+                        YXSJ = 1440f;
+                    }
+
+                    float scsj = 0;
+                    try {
+                        int hour = YXSJ == null ? 0 : (YXSJ.intValue() / 60);
+                        float minite = YXSJ % 60;
+                        scsj = hour + minite / 100;
+                    } catch (Exception e) {
+                    }
+
+                    try (Connection con = sql2o.open()) {
+                        con.createQuery(sql) //
+                                .addParameter("ID", UUID.randomUUID().toString().replace("-", "")) //
+                                .addParameter("CODE", code) //
+                                .addParameter("PSJ", PSJ) //配水间
+                                .addParameter("SAVE_TIME", new Date())//
+                                .addParameter("DATE_TIME", c.getTime())//
+                                .addParameter("YXSJ", scsj)//运行时间
+                                .addParameter("GY", GY)//干压
+                                .addParameter("ZRYL", ZRYL)//注入压力
+                                .addParameter("YY", ZRYL)//油压
+                                .addParameter("TY", TY)//套压
+                                .addParameter("RPZL", RPZL)//日配注量
+                                .addParameter("LJZSL", LJZSL)//日累积注水量
+                                .addParameter("CQL", CQL)//超欠量
+                                .executeUpdate();//
+                    } catch (Exception e) {
+                        log.info("处理水井：" + code + "出现异常！" + e.toString());
+                        continue;
+                    }
+
+                    String jzrSql = "Insert into QYSCZH.SZS_SRD_SJ "
+                            + "(JH, RQ, SCSJ, GXYL, YY, RZSL, GXSJ, PZL, GXR) "
+                            + "values (:JH, :RQ, :SCSJ, :GXYL, :YY, :RZSL, :GXSJ, :PZL, :GXR)";
+
+                    try (Connection con = sql2o.open()) {
+                        con.createQuery(jzrSql)
+                                .addParameter("JH", code) //井号
+                                .addParameter("RQ", c.getTime())//日期
+                                .addParameter("SCSJ", scsj) //生产时间
+                                .addParameter("GXYL", GY) //干线压力
+                                .addParameter("YY", ZRYL) //油压
+                                .addParameter("RZSL", LJZSL) //日注水量
+                                .addParameter("GXSJ", new Date())//更新时间
+                                .addParameter("PZL", RPZL)//日配注量
+                                .addParameter("GXR", "管理员")//更新人
+                                .executeUpdate();
+                    } catch (Exception e) {
+                        log.info(code + "发生异常！");
+                        e.printStackTrace();
+                        continue;
+                    }
+                    //清除班累积运算值
+                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
+                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), "0");
                 } catch (Exception e) {
-                    log.info("处理水井：" + code + "出现异常！" + e.toString());
+                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
+                    realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), "0");
+                    log.error(e.toString());
                     continue;
                 }
-
-                String jzrSql = "Insert into QYSCZH.SZS_SRD_SJ "
-                        + "(JH, RQ, SCSJ, GXYL, YY, RZSL, GXSJ, PZL, GXR) "
-                        + "values (:JH, :RQ, :SCSJ, :GXYL, :YY, :RZSL, :GXSJ, :PZL, :GXR)";
-
-
-                try (Connection con = sql2o.open()) {
-                    con.createQuery(jzrSql)
-                            .addParameter("JH", code) //井号
-                            .addParameter("RQ", c.getTime())//日期
-                            .addParameter("SCSJ", scsj) //生产时间
-                            .addParameter("GXYL", GY) //干线压力
-                            .addParameter("YY", ZRYL) //油压
-                            .addParameter("RZSL", LJZSL) //日注水量
-                            .addParameter("GXSJ", new Date())//更新时间
-                            .addParameter("PZL", RPZL)//日配注量
-                            .addParameter("GXR", "管理员")//更新人
-                            .executeUpdate();
-                } catch (Exception e) {
-                    log.info(code + "发生异常！");
-                    e.printStackTrace();
-                    continue;
-                }
-
-                //清除班累积运算值
-                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJYXSJ.toString(), "0");
-                realtimeDataService.putValue(code, RedisKeysEnum.BAN_LJZSL.toString(), "0");
             }
             log.info("水井日报录入结束——现在时刻：" + CommonUtils.date2String(new Date()));
         }
@@ -482,13 +490,13 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
 //                        + "values (:SBMC, :YL, :WD, :SSLL, :LJLL, :FMZT, :KD, :PZL, :GXYL, :CJSJ, :ZCSJ, :SFBL)";
 //
 //                try (Connection con = sql2o.open()) {
-                
+
                 String jzrSql = "Insert into QYSCZH.SSZC_PSFZ "
                         + "(SBMC, YL, WD, SSLL, LJLL, FMZT, KD, PZL, GXYL, CJSJ, ZCSJ, SFBL) "
                         + "values (:SBMC, :YL, :WD, :SSLL, :LJLL, :FMZT, :KD, :PZL, :GXYL, :CJSJ, :ZCSJ, :SFBL)";
 
                 try (Connection con = sql2o2.open()) {
-                
+
                     con.createQuery(jzrSql)
                             .addParameter("SBMC", code) //井号
                             .addParameter("YL", YL)//压力

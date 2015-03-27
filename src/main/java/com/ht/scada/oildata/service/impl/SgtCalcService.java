@@ -278,9 +278,16 @@ public class SgtCalcService {
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), String.valueOf(wetkCyl));
             realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), String.valueOf(wetkYl));
         } else {//两个小时内无数据
-            realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
-            realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), "0");
-            realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), "0");
+            if (code.equals("GD1-18P219")) {
+                wetkCyl = CYL == null ? 0f : CYL;
+                wetkYl = wetkCyl * (1 - HS);
+                realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), String.valueOf(wetkCyl));
+                realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), String.valueOf(wetkYl));
+            } else {
+                realtimeDataService.putValue(code, RedisKeysEnum.BENG_XIAO.toString(), "0");
+                realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_CYL.toString(), "0");
+                realtimeDataService.putValue(code, RedisKeysEnum.WETK_RI_SS_YL.toString(), "0"); 
+            }
         }
         //***************END 威尔泰克功图 ******************
 

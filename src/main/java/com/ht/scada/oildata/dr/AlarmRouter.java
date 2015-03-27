@@ -5,7 +5,6 @@
 package com.ht.scada.oildata.dr;
 
 import com.alibaba.fastjson.JSON;
-import com.ht.scada.oildata.service.impl.SgtCalcService;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -36,14 +35,18 @@ public class AlarmRouter {
     private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String, String> dwdmMap;    //code:233444
     private Map<String, String> bjdmMap;       //i_c:A000
+    private Map<String, Map<String, String>> zkMap;  //站库单位代码 z1-3jlz:88888
 
     @PostConstruct
     public void init() {
         dwdmMap = new HashMap<>();
         bjdmMap = new HashMap<>();
+        zkMap = new HashMap<>();
         Connection con = sql2o.open();
         List<String> codeList = con.createQuery("select code from t_end_tag where type = 'YOU_JING'").executeAndFetch(String.class);
         List<Map<String, Object>> bjdmList = con.createQuery("select varname,bjdm from Z_BJDM").executeAndFetchTable().asList();
+        List<Map<String, Object>> zkList = con.createQuery("select localcode,remotecode,dwdm from T_ZK_CODE_MAP").executeAndFetchTable().asList();
+
         if (codeList != null) {
             int i = 0;
             for (String code : codeList) {
@@ -56,11 +59,22 @@ public class AlarmRouter {
                 }
             }
         }
-        if(bjdmList != null) {
-            for(Map<String, Object> map : bjdmList) {
+        if (bjdmList != null) {
+            for (Map<String, Object> map : bjdmList) {
                 String varName = (String) map.get("varname");
                 String bjdm = (String) map.get("bjdm");
                 bjdmMap.put(varName, bjdm);
+            }
+        }
+        if (zkList != null) {
+            for (Map<String, Object> map : zkList) {
+                String code = (String) map.get("localcode");
+                String jh = (String) map.get("remotecode");
+                String dwdm = (String) map.get("dwdm");
+                Map<String, String> map1 = new HashMap<>();
+                map1.put("dwdm", dwdm);
+                map1.put("jh", jh);
+                zkMap.put(code, map1);
             }
         }
     }
@@ -75,11 +89,6 @@ public class AlarmRouter {
                 System.out.println(message);
                 SoeRecord soeRecord = JSON.parseObject(message, SoeRecord.class);
                 BJD = soeRecord.getCode();
-                DWDM = dwdmMap.get(BJD);
-                if (DWDM == null) {  //暂时只处理油井
-                    log.info("暂时只转储油井报警！");
-                    return;
-                }
                 ID = soeRecord.getId();
                 JCSJ = soeRecord.getResumeTime();
                 if (JCSJ != null) {
@@ -87,35 +96,52 @@ public class AlarmRouter {
                     return;
                 }
                 BJSJ = soeRecord.getDeviceTime();
-
                 String varName = soeRecord.getName();
                 String soeValue = soeRecord.getSoeValue();
                 String shresholdValue = soeRecord.getShresholdValue();
-                if (soeValue != null) {
-                    String values[] = soeValue.split(";");
-                    if (values.length == 1) {
-                        XX1 = Float.valueOf(values[0].split(" ")[1].trim());
-                    } else if (values.length == 3) {
-                        XX1 = Float.valueOf(values[0].split(" ")[1].trim());
-                        XX2 = Float.valueOf(values[1].split(" ")[1].trim());
-                        XX3 = Float.valueOf(values[2].split(" ")[1].trim());
-                    }
-                }
-                if (shresholdValue != null) {
-                    String values[] = shresholdValue.split(";");
-                    if (values.length == 1) {
-                        YZ = Float.valueOf(values[0].split(" ")[1].trim());
-                    } else if (values.length == 3) {
-                        //暂不处理
-                    }
-                }
 
+                DWDM = dwdmMap.get(BJD);
+                if (DWDM != null) {  //油井
+                    if (soeValue != null) {
+                        String values[] = soeValue.split(";");
+                        if (values.length == 1) {
+                            XX1 = Float.valueOf(values[0].split(" ")[1].trim());
+                        } else if (values.length == 3) {
+                            XX1 = Float.valueOf(values[0].split(" ")[1].trim());
+                            XX2 = Float.valueOf(values[1].split(" ")[1].trim());
+                            XX3 = Float.valueOf(values[2].split(" ")[1].trim());
+                        }
+                    }
+                    if (shresholdValue != null) {
+                        String values[] = shresholdValue.split(";");
+                        if (values.length == 1) {
+                            YZ = Float.valueOf(values[0].split(" ")[1].trim());
+                        } else if (values.length == 3) {
+                            //暂不处理
+                        }
+                    }
+                } else {//计量站、配水间
+                    Map<String, String> map = zkMap.get(BJD);
+                    if(map == null) {
+                        return;
+                    }
+                    String jh = map.get("jh");
+                    String dwdm = map.get("dwdm");
+                    DWDM = dwdm;
+                    BJD = jh;
+                    if (soeValue != null) {
+                        XX1 = Float.valueOf(soeValue);
+                    }
+                    if (shresholdValue != null) {
+                        YZ = Float.valueOf(shresholdValue);
+                    }
+                }
 
                 String dm = bjdmMap.get(varName);
-                if(dm.contains(",")) {
+                if (dm.contains(",")) {
                     String dms[] = dm.split(",");
-                    if(XX1 != null && YZ != null) {
-                        if(XX1>=YZ) {
+                    if (XX1 != null && YZ != null) {
+                        if (XX1 >= YZ) {
                             BJDM = dms[0];
                         } else {
                             BJDM = dms[1];

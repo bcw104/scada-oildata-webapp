@@ -268,7 +268,7 @@ public class DataRouter {
             }
             query.addToBatch();
             i++;
-            if (i >= 50) {// 每?条执行一次提交
+            if (i >= 10) {// 每?条执行一次提交
                 query.executeBatch();
                 i = 0;
             }
@@ -504,7 +504,7 @@ public class DataRouter {
             }
             secondMap.put(gjz, value);
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             log.error(code + ":" + gjz);
             value = dataMap.get(code) == null ? null : dataMap.get(code).get(gjz);
         }

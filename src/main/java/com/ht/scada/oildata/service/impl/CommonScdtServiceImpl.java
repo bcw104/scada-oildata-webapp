@@ -67,8 +67,8 @@ public class CommonScdtServiceImpl implements CommonScdtService {
     private RealtimeDataService realtimeDataService;
 //    @Autowired
 //    private RealtimeDataService1 realtimeDataService1;
-    @Autowired
-    private RealtimeDataService2 realtimeDataService2;
+//    @Autowired
+//    private RealtimeDataService2 realtimeDataService2;
     @Autowired
     private HistoryDataServiceImpl2 historyDataServiceImpl2;
     @Inject
@@ -348,12 +348,12 @@ public class CommonScdtServiceImpl implements CommonScdtService {
                     query.addParameter("CODE", code);
                     List<String> dataList = query.executeAndFetch(String.class);
                     for (String s : dataList) {
-                        long l = realtimeDataService2.llen(code + s);
-                        System.out.println("数据长度：" + l);
-                        if (l > 80) {//一天的数据量
-                            System.out.println("数据长度：" + l);
-                            realtimeDataService2.ltrim(code + s, 80, -1);
-                        }
+//                        long l = realtimeDataService2.llen(code + s);
+//                        System.out.println("数据长度：" + l);
+//                        if (l > 80) {//一天的数据量
+//                            System.out.println("数据长度：" + l);
+//                            realtimeDataService2.ltrim(code + s, 80, -1);
+//                        }
 //                        String result = realtimeDataService2.rpopListValue(code + s);
 //                        if (result != null) {
 //                            try {
@@ -515,7 +515,7 @@ public class CommonScdtServiceImpl implements CommonScdtService {
             for (Map<String, Object> map : list) {
                 try {
                     String code = (String) map.get("bjd");
-                    Date date = (Date) map.get("bjsj");
+                    Date date = (Date) map.get("bgsj");
                     String bjxx = (String) map.get("bjxx");
                     String xx1 = ((BigDecimal) map.get("xx1")).toString();
                     String yz = ((BigDecimal) map.get("yz")).toString();

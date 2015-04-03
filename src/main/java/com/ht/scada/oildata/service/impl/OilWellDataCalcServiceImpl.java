@@ -538,6 +538,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     if (RLJYXSJ != null && RLJYXSJ >= 1435) {
                         RLJYXSJ = 1440f;
                     }
+                    if(RLJYXSJ == 1320) {
+                        RLJYXSJ = 1440f;
+                    } else if(RLJYXSJ == 1200) {
+                        RLJYXSJ = 1440f;
+                    }
 
                     float scsj = 0;
                     try {

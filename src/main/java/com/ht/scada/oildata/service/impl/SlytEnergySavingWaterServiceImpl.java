@@ -83,8 +83,8 @@ public class SlytEnergySavingWaterServiceImpl implements SlytEnergySavingWaterSe
 		for ( int i=0; i<intervalInfoList.size(); i++ ) {
 		
 			// System.out.println(ids[i] + ", " + intervalBegins[i] + ", " + intervalEnds[i] + ", " + intervalLongs[i] + ", " + cofficients[i]);
-			if ( (intervalBegins[i].getHours() == currentTime.getHours() && intervalBegins[i].getMinutes() == currentTime.getMinutes()) ){
-					// || intervalBegins[i].getHours() == 10 ) {	// 为了测试使用
+			if ( (intervalBegins[i].getHours() == currentTime.getHours() && intervalBegins[i].getMinutes() == currentTime.getMinutes()) 	){
+					// || intervalBegins[i].getHours() == 11 ) {	// 为了测试使用
 				
 				log.info( "时间段：" + intervalBegins[i].toString().split(" ")[1] + " - " + intervalEnds[i].toString().split(" ")[1] + ", 时段长 " + intervalLongs[i] + ", 标准系数 " + cofficients[i]);
 				
@@ -99,75 +99,85 @@ public class SlytEnergySavingWaterServiceImpl implements SlytEnergySavingWaterSe
 				int num = 1;
 				for ( int w=0; w<wellBasicSetList.size(); w++ ) {
 					
-					Map mapTemp = wellBasicSetList.get(w);				// 获得该行记录
-					String code = (String) mapTemp.get("code");
-					int used = Integer.parseInt( ((BigDecimal)mapTemp.get("used")).toString() );
-					String model = (String) mapTemp.get("model");
-					String detail = (String) mapTemp.get("detail");
-					// System.out.println("当前查询的井Code为：" + code + ", 是否启用： " + used + ", 模式： " + model + ",  详情： " + detail );
-					
-					if ( used == 1 ) {	// 是否启用智能配注 1-启用，0-未启用
+					try {
 						
-						// 算法： 时段内配注量 = 日配注量/24*系数
-						//（1）获得配注量
-						Float RPZL = null;															// 源点获得的日配注水量
-	                    Map<String, Object> map = findDataFromYdkByCode(code);	 					// 源头库数据
-	                    if ( map != null ) {
-	                        RPZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString());
-	                    }
-						// Float RPZL = 100f;														// 源点获得的日配注水量(离线测试)
-	                    
-	                    // （2）获得水量系数
-	                    Float xs = null;
-	                    if ( model.equals("标准模式") ) {
-	                    	xs = cofficients[i];
-	                    } else {
-	                    	if ( detail == null || detail.equals("") ) {
-	                    		// System.out.println("请先配置 " + code + " 水井的个性配注方式...");
-	                    		continue;
-	                    	} else {
-	                    		String xsArrayTemp = detail.substring(1, detail.length()-1).split(",")[i];	// 过滤掉前后的括号 [] 
-	                    		xs = Float.parseFloat(xsArrayTemp);
-	                    	}
-	                    }
-	                    Float traditionZSOneHour = CommonUtils.string2Float( RPZL/24 + "", 2 );				// 获得传统配注实际应该注水量，每小时(保留2位小数)
-	                    Float realZSOneHour = CommonUtils.string2Float( RPZL/24*xs + "", 2 );				// 获得智能配注实际应该注水量，每小时(保留2位小数)（即新的配注设定值）
-	                  
-	                    // （3）执行配注操作
-	                    String [] rtucodeAndVarName = getCodeAndVarName(waterWells, code);					// 首先要获得该井对应的RTU Code和VarName
-	                    String valueStr = realtimeDataService.getEndTagVarInfo(rtucodeAndVarName[0], rtucodeAndVarName[1]);					// 获得未调节前流量设定值
-	                    boolean flag = flowControl(rtucodeAndVarName[0], rtucodeAndVarName[1], rtucodeAndVarName[2], realZSOneHour, Float.parseFloat(valueStr));	// 调节
-	                    
-	                    if ( flag == false ) {		// 若调节失败，延时100ms再次执行一次(允许一口水井至多执行两次遥调)
-	                    	try {
-								Thread.sleep(100);
-								flag = flowControl(rtucodeAndVarName[0], rtucodeAndVarName[1], rtucodeAndVarName[2], realZSOneHour, Float.parseFloat(valueStr));	// 调节
-								num ++;
-							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-	                    }
+						Map mapTemp = wellBasicSetList.get(w);				// 获得该行记录
+						String code = (String) mapTemp.get("code");
+						int used = Integer.parseInt( ((BigDecimal)mapTemp.get("used")).toString() );
+						String model = (String) mapTemp.get("model");
+						String detail = (String) mapTemp.get("detail");
+						// System.out.println("当前查询的井Code为：" + code + ", 是否启用： " + used + ", 模式： " + model + ",  详情： " + detail );
 						
-	                    log.info( code + " 日配注：" + RPZL + ", 下阶段‘智能vs传统’配注： " + realZSOneHour + "vs" + traditionZSOneHour + " m³/h, " +
-	                    		(model.equals("标准模式")?"标准模式":"个性模式") + ", 系数： " + xs + "    详情：" + rtucodeAndVarName[0] + "^" + rtucodeAndVarName[1] + ": " +
-	                    		Float.parseFloat(valueStr) + " -> " + realZSOneHour + " m³/h  " + ( flag == true ? "调节成功": "调节失败") + "-" + num );
-	                    
-	                    // （4）获得配注前水井相关信息
-	                    WaterWellInfoYT waterWellInfoYTCurrent = new WaterWellInfoYT();		// 构造调水临时变量
-	                    waterWellInfoYTCurrent.setWellCode(code);							// 设置水井井号
-	                    waterWellInfoYTCurrent.setRtuCode(rtucodeAndVarName[0]);			// 设置RTUCode
-	                    waterWellInfoYTCurrent.setVarNameLlsdz(rtucodeAndVarName[1]);		// 设置调节变量名_流量设定值
-	                    waterWellInfoYTCurrent.setVarNameZSYLZDLC(rtucodeAndVarName[2]);	// 设置调节变量名_注水压力最大量程
-	                    waterWellInfoYTCurrent.setXs(xs);									// 设置本阶段系数
-	                    waterWellInfoYTCurrent.setLlsdzBefore(Float.parseFloat(valueStr));	// 设置流量设定值（调节前）
-	                    waterWellInfoYTCurrent.setLlsdzAfter(realZSOneHour);				// 设定流量设定值（调节后）
-	                    float xishu =tagCfgTplService.getXiShuByCodeAndVarname(rtucodeAndVarName[0], rtucodeAndVarName[1]);	// 获取流量设定值系数
-	                    waterWellInfoYTCurrent.setLlsdzxs(xishu);							// 设置流量设定值系数
-	                    waterWellInfoYTList.add(waterWellInfoYTCurrent);					// 添加入集合
-	                    
-					} else {
-						// doNothing
+						if ( used == 1 ) {									// 是否启用智能配注 1-启用，0-未启用
+						// if ( used == 1 && code.equals("GD1-10-409") ) {	// 是否启用智能配注 1-启用，0-未启用 （测试使用）
+							System.out.println(" 将执行智能配注的井为： " + code);
+							
+							// 算法： 时段内配注量 = 日配注量/24*系数
+							//（1）获得配注量
+							Float RPZL = null;															// 源点获得的日配注水量
+		                    Map<String, Object> map = findDataFromYdkByCode(code);	 					// 源头库数据
+		                    if ( map != null ) {
+		                        RPZL = Float.parseFloat(((BigDecimal) map.get("rpzsl")).toString());
+		                    }
+							// Float RPZL = 100f;														// 源点获得的日配注水量(离线测试)
+		                    
+		                    // （2）获得水量系数
+		                    Float xs = null;
+		                    if ( model.equals("标准模式") ) {
+		                    	xs = cofficients[i];
+		                    } else {
+		                    	if ( detail == null || detail.equals("") ) {
+		                    		// System.out.println("请先配置 " + code + " 水井的个性配注方式...");
+		                    		continue;
+		                    	} else {
+		                    		String xsArrayTemp = detail.substring(1, detail.length()-1).split(",")[i];	// 过滤掉前后的括号 [] 
+		                    		xs = Float.parseFloat(xsArrayTemp);
+		                    	}
+		                    }
+		                    Float traditionZSOneHour = CommonUtils.string2Float( RPZL/24 + "", 2 );				// 获得传统配注实际应该注水量，每小时(保留2位小数)
+		                    Float realZSOneHour = CommonUtils.string2Float( RPZL/24*xs + "", 2 );				// 获得智能配注实际应该注水量，每小时(保留2位小数)（即新的配注设定值）
+		                  
+		                    // （3）执行配注操作
+		                    String [] rtucodeAndVarName = getCodeAndVarName(waterWells, code);					// 首先要获得该井对应的RTU Code和VarName
+		                    String valueStr = realtimeDataService.getEndTagVarInfo(rtucodeAndVarName[0], rtucodeAndVarName[1]);					// 获得未调节前流量设定值
+		                    boolean flag = flowControl(rtucodeAndVarName[0], rtucodeAndVarName[1], rtucodeAndVarName[2], realZSOneHour, Float.parseFloat(valueStr));	// 调节
+		                    
+		                    if ( flag == false ) {		// 若调节失败，延时100ms再次执行一次(允许一口水井至多执行两次遥调)
+		                    	try {
+									Thread.sleep(100);
+									flag = flowControl(rtucodeAndVarName[0], rtucodeAndVarName[1], rtucodeAndVarName[2], realZSOneHour, Float.parseFloat(valueStr));	// 调节
+									num ++;
+								} catch (InterruptedException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+									continue;
+								}
+		                    }
+							
+		                    log.info( code + " 日配注：" + RPZL + ", 下阶段‘智能vs传统’配注： " + realZSOneHour + "vs" + traditionZSOneHour + " m³/h, " +
+		                    		(model.equals("标准模式")?"标准模式":"个性模式") + ", 系数： " + xs + "    详情：" + rtucodeAndVarName[0] + "^" + rtucodeAndVarName[1] + ": " +
+		                    		Float.parseFloat(valueStr) + " -> " + realZSOneHour + " m³/h  " + ( flag == true ? "调节成功": "调节失败") + "-" + num );
+		                    
+		                    // （4）获得配注前水井相关信息
+		                    WaterWellInfoYT waterWellInfoYTCurrent = new WaterWellInfoYT();		// 构造调水临时变量
+		                    waterWellInfoYTCurrent.setWellCode(code);							// 设置水井井号
+		                    waterWellInfoYTCurrent.setRtuCode(rtucodeAndVarName[0]);			// 设置RTUCode
+		                    waterWellInfoYTCurrent.setVarNameLlsdz(rtucodeAndVarName[1]);		// 设置调节变量名_流量设定值
+		                    waterWellInfoYTCurrent.setVarNameZSYLZDLC(rtucodeAndVarName[2]);	// 设置调节变量名_注水压力最大量程
+		                    waterWellInfoYTCurrent.setXs(xs);									// 设置本阶段系数
+		                    waterWellInfoYTCurrent.setLlsdzBefore(Float.parseFloat(valueStr));	// 设置流量设定值（调节前）
+		                    waterWellInfoYTCurrent.setLlsdzAfter(realZSOneHour);				// 设定流量设定值（调节后）
+		                    float xishu =tagCfgTplService.getXiShuByCodeAndVarname(rtucodeAndVarName[0], rtucodeAndVarName[1]);	// 获取流量设定值系数
+		                    waterWellInfoYTCurrent.setLlsdzxs(xishu);							// 设置流量设定值系数
+		                    waterWellInfoYTList.add(waterWellInfoYTCurrent);					// 添加入集合
+		                    
+						} else {
+							// doNothing
+						}
+						
+					} catch ( Exception e3 ) {
+						System.out.println( (String)wellBasicSetList.get(w).get("code") + " 调节时出现异常, 请排查...");
+						continue;
 					}
 					
 				}	// endInner for
@@ -177,7 +187,8 @@ public class SlytEnergySavingWaterServiceImpl implements SlytEnergySavingWaterSe
 		}	// endOutter for
 		log.info("本阶段智能配注调节执行完毕, 10分钟后进行本轮调节检查...");
 		
-		successfulChecking( waterWellInfoYTList );	// 本阶段配注成功性检验程序
+		// successfulChecking( waterWellInfoYTList );	// 本阶段配注成功性检验程序
+		successfulCheckingAndDatabaseWrite( waterWellInfoYTList );	// 本阶段配注成功性检验程序
 		
 	}
 	
@@ -212,38 +223,162 @@ public class SlytEnergySavingWaterServiceImpl implements SlytEnergySavingWaterSe
 				// 启动调节配注（再次调节）
 				
 				int value =  (int) ( valueSet / temp.getLlsdzxs() );
-//				try {
-//					boolean flag = rtuService.yt( temp.getRtuCode(), temp.getVarNameLlsdz(), value );		// 执行调节动作
-//					
-//					if ( flag == true ) {
-//						log.info( temp.getWellCode() + "流量设定值自检调节成功-1");
-//					} else {
-//						Thread.sleep(500);			// 等待0.5s
-//						boolean flag3 = rtuService.yt( temp.getRtuCode(), temp.getVarNameLlsdz(), value );	// 执行调节动作
-//						log.info( temp.getRtuCode() + " " + temp.getVarNameLlsdz() + "  " + ( (flag3 == true)?"流量设定值自检调节成功-2":"流量设定值自检调节失败-2" ));
-//					}
-//					
-//					Thread.sleep(500);				// 0.5s后执行量程调节
-//					boolean flag1 = rtuService.yt( temp.getRtuCode(), temp.getVarNameZSYLZDLC(), 160 );		// 调用遥调方法
-//					if ( flag1 == false ) {
-//						Thread.sleep(500);			// 等待0.5s
-//						boolean flag2 =  rtuService.yt( temp.getRtuCode(), temp.getVarNameZSYLZDLC(), 160 );// 重置失败再次执行一次
-//						log.info( temp.getRtuCode() + " " + temp.getVarNameZSYLZDLC() + "  " + ( (flag2 == true)?"量程设定值重置成功-2":"量程设定值重置失败-2" ));
-//					} else {
-//						log.info( temp.getRtuCode() + " " + temp.getVarNameZSYLZDLC() + "  " + "量程设定值重置成功-1");
-//					}
-//					
-//					Thread.sleep(500);				// 0.5s后执行下以后井调节
-//					
-//				} catch (Exception e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
+				try {
+					boolean flag = rtuService.yt( temp.getRtuCode(), temp.getVarNameLlsdz(), value );		// 执行调节动作
+					
+					if ( flag == true ) {
+						log.info( temp.getWellCode() + "流量设定值自检调节成功-1");
+					} else {
+						Thread.sleep(500);			// 等待0.5s
+						boolean flag3 = rtuService.yt( temp.getRtuCode(), temp.getVarNameLlsdz(), value );	// 执行调节动作
+						log.info( temp.getRtuCode() + " " + temp.getVarNameLlsdz() + "  " + ( (flag3 == true)?"流量设定值自检调节成功-2":"流量设定值自检调节失败-2" ));
+					}
+					
+					Thread.sleep(500);				// 0.5s后执行量程调节
+					boolean flag1 = rtuService.yt( temp.getRtuCode(), temp.getVarNameZSYLZDLC(), 160 );		// 调用遥调方法
+					if ( flag1 == false ) {
+						Thread.sleep(500);			// 等待0.5s
+						boolean flag2 =  rtuService.yt( temp.getRtuCode(), temp.getVarNameZSYLZDLC(), 160 );// 重置失败再次执行一次
+						log.info( temp.getRtuCode() + " " + temp.getVarNameZSYLZDLC() + "  " + ( (flag2 == true)?"量程设定值重置成功-2":"量程设定值重置失败-2" ));
+					} else {
+						log.info( temp.getRtuCode() + " " + temp.getVarNameZSYLZDLC() + "  " + "量程设定值重置成功-1");
+					}
+					
+					Thread.sleep(500);				// 0.5s后执行下以后井调节
+					
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			
 			}
 			// temp.infoPrint();
 		}
 		log.info("调节检查结束，初次调节成功 " + successNum + "/" + waterWellInfoYTList.size() + " 口水井, 未成功井请查看详情日志...\r\n");
+	}
+	
+	/**
+	 * 智能阶段配注成功性检验程序 ,并将检验结果入库，2015.6.7
+	 * @author PengWang 
+	 * @param waterWellInfoYTList
+	 */
+	private void successfulCheckingAndDatabaseWrite ( ArrayList<WaterWellInfoYT> waterWellInfoYTList ) {
+		
+		
+		ArrayList<WaterWellYTRecord> ytRecordList = new ArrayList<>();	// 声明遥调记录对象
+		
+		int interval = 600000;
+		try {
+			// Thread.sleep(600000);								// 10min延迟启动时间
+			Thread.sleep(interval);									// 30延迟启动时间
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		log.info("调节检查(第一次)开始...");
+		int successNum = 0;									// 初次调节成功水井井数
+		for ( int q=0; q<waterWellInfoYTList.size(); q++ ) {
+		
+			WaterWellInfoYT temp = waterWellInfoYTList.get(q);
+			String valueCurrentStr = realtimeDataService.getEndTagVarInfo( temp.getRtuCode(), temp.getVarNameLlsdz() );	// 当前获得的流量设定值
+			Float valueCurrent = CommonUtils.string2Float( valueCurrentStr , 1 );			// 当前值
+			Float valueSet = CommonUtils.string2Float( temp.getLlsdzAfter() + "", 1 );		// 设定值
+			
+			
+			WaterWellYTRecord wwytRecord = new WaterWellYTRecord();
+			wwytRecord.setWellCode(temp.getWellCode());		// 设置井号
+			wwytRecord.setStartTime(new Date());			// 设置记录时间
+			wwytRecord.setXs(temp.getXs());					// 设置系数
+			wwytRecord.setLlsdzBefore(valueCurrent);		// 当前的流量
+			wwytRecord.setLlsdzAfter(valueSet);				// 要调节至的流量
+			wwytRecord.setInterval(10);						// 检查间隔默认十分钟
+		
+					
+			if ( valueCurrent.floatValue() == valueSet.floatValue() ) {						// 调节成功了
+				successNum ++ ;
+				log.info( temp.getWellCode() + "  +" + successNum + " 配注成功（自检）");
+				wwytRecord.setResult(1);					// 第一遍调节成功，且未执行第二遍调注
+				wwytRecord.setFirstTimeResult(1);
+				wwytRecord.setSecondTimeResult(2);
+				ytRecordList.add(wwytRecord);
+				continue;
+			} else {																		// 初次调节失败
+				log.info( temp.getWellCode() + " 配注失败（自检）!  当前值/应该值" + valueCurrent + "/" + valueSet );
+				// 启动调节配注（再次调节）
+				
+				int value =  (int) ( valueSet / temp.getLlsdzxs() );
+				try {
+					boolean flag = rtuService.yt( temp.getRtuCode(), temp.getVarNameLlsdz(), value );		// 执行调节动作
+					
+					if ( flag == true ) {
+						log.info( temp.getWellCode() + "流量设定值自检调节成功-1");
+					} else {
+						Thread.sleep(500);			// 等待0.5s
+						boolean flag3 = rtuService.yt( temp.getRtuCode(), temp.getVarNameLlsdz(), value );	// 执行调节动作
+						log.info( temp.getRtuCode() + " " + temp.getVarNameLlsdz() + "  " + ( (flag3 == true)?"流量设定值自检调节成功-2":"流量设定值自检调节失败-2" ));
+					}
+					
+					Thread.sleep(500);				// 0.5s后执行量程调节
+					boolean flag1 = rtuService.yt( temp.getRtuCode(), temp.getVarNameZSYLZDLC(), 160 );		// 调用遥调方法
+					if ( flag1 == false ) {
+						Thread.sleep(500);			// 等待0.5s
+						boolean flag2 =  rtuService.yt( temp.getRtuCode(), temp.getVarNameZSYLZDLC(), 160 );// 重置失败再次执行一次
+						log.info( temp.getRtuCode() + " " + temp.getVarNameZSYLZDLC() + "  " + ( (flag2 == true)?"量程设定值重置成功-2":"量程设定值重置失败-2" ));
+					} else {
+						log.info( temp.getRtuCode() + " " + temp.getVarNameZSYLZDLC() + "  " + "量程设定值重置成功-1");
+					}
+					
+					Thread.sleep(500);							// 0.5s后执行下以后井调节
+					wwytRecord.setResult(0);					// 默认以后失败
+					wwytRecord.setFirstTimeResult(0);
+					wwytRecord.setSecondTimeResult(0);
+					ytRecordList.add(wwytRecord);
+					
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			
+			}
+			// temp.infoPrint();
+		}
+		log.info("调节检查（第一次）结束，成功 " + successNum + "/" + waterWellInfoYTList.size() + " 口水井!  " + (interval/1000/60) +" 分后开始下次检查...\r\n");
+		
+		try {
+			Thread.sleep(interval);								// interval延迟启动时间
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		log.info("调节检查(第二次)开始...");
+		// 执行第二遍检查
+		successNum = 0 ;
+		for ( int q=0; q<waterWellInfoYTList.size(); q++ ) {
+			
+			WaterWellYTRecord wwytRecord = ytRecordList.get(q);
+			
+			WaterWellInfoYT temp = waterWellInfoYTList.get(q);
+			String valueCurrentStr = realtimeDataService.getEndTagVarInfo( temp.getRtuCode(), temp.getVarNameLlsdz() );	// 当前获得的流量设定值
+			Float valueCurrent = CommonUtils.string2Float( valueCurrentStr , 1 );			// 当前值
+			Float valueSet = CommonUtils.string2Float( temp.getLlsdzAfter() + "", 1 );		// 设定值
+			
+			if ( valueCurrent.floatValue() == valueSet.floatValue() ) {						// 调节成功了
+				successNum ++ ;
+				log.info( temp.getWellCode() + "  +" + successNum + " 配注成功（自检）");
+				if ( wwytRecord.getResult()!=1 ) {				// 第一次成功不进行检查
+					wwytRecord.setResult(1);					// 第二遍调节成功
+					wwytRecord.setFirstTimeResult(0);
+					wwytRecord.setSecondTimeResult(1);
+				}
+				continue;
+			}
+		}
+		
+		for ( int w=0; w<ytRecordList.size(); w++ ) {
+			ytTestRecordAdd( ytRecordList.get(w) );				// 写入检查记录
+		}
+		log.info(new Date() + " 检查记录对象写入完毕...");
+		
+		log.info("调节检查（第二次）结束，两次共调节成功 " + successNum + "/" + waterWellInfoYTList.size() + " 口水井, 未成功井请查看详情日志...\r\n");
 	}
 	
 	/**
@@ -677,5 +812,232 @@ public class SlytEnergySavingWaterServiceImpl implements SlytEnergySavingWaterSe
 		}
 
 	}
+	
+	/**
+	 * 智能配注调节 结果记录实体 2015.6.7
+	 * @author PengWang
+	 *
+	 */
+	private class WaterWellYTRecord {
+		
+		private String wellCode;			// 水井井号
+		private Date startTime;				// 阶段开始时间
+		private Float xs;					// 本阶段注水调节系数
+		private Float llsdzBefore;			// 调节前流量设定值
+		private Float llsdzAfter;			// 调节后流量设定值
+		private Integer result;				// 调节结果
+		private Integer firstTimeResult;	// 第一次调节结果
+		private Integer secondTimeResult;	// 第二次调节结果
+		private Integer interval;			// 调节间隔
+		
+		public String getWellCode() {
+			return wellCode;
+		}
+		public void setWellCode(String wellCode) {
+			this.wellCode = wellCode;
+		}
+		public Date getStartTime() {
+			return startTime;
+		}
+		public void setStartTime(Date startTime) {
+			this.startTime = startTime;
+		}
+		public Float getXs() {
+			return xs;
+		}
+		public void setXs(Float xs) {
+			this.xs = xs;
+		}
+		public Float getLlsdzBefore() {
+			return llsdzBefore;
+		}
+		public void setLlsdzBefore(Float llsdzBefore) {
+			this.llsdzBefore = llsdzBefore;
+		}
+		public Float getLlsdzAfter() {
+			return llsdzAfter;
+		}
+		public void setLlsdzAfter(Float llsdzAfter) {
+			this.llsdzAfter = llsdzAfter;
+		}
+		public Integer getResult() {
+			return result;
+		}
+		public void setResult(Integer result) {
+			this.result = result;
+		}
+		public Integer getFirstTimeResult() {
+			return firstTimeResult;
+		}
+		public void setFirstTimeResult(Integer firstTimeResult) {
+			this.firstTimeResult = firstTimeResult;
+		}
+		public Integer getSecondTimeResult() {
+			return secondTimeResult;
+		}
+		public void setSecondTimeResult(Integer secondTimeResult) {
+			this.secondTimeResult = secondTimeResult;
+		}
+		public Integer getInterval() {
+			return interval;
+		}
+		public void setInterval(Integer interval) {
+			this.interval = interval;
+		}
+		
+	}
+	
     
+	@Override
+	public void waterWellInfoInit () {
+		
+		// 水井井号、采集RTUCode、采集CodeID，注水压力varName、两个提示，瞬时流量varName、两个提示，累积流量varName,两个提示
+		String insertSql = "insert into T_VAR_IO_INFO_WATERWELL_YJ_MAP "+ "(CODE, CODE_ID, RTU_CODE, RTU_CODE_ID, ZSYL_VARNAME, ZSYL_SXBJXX, ZSYL_XXBJXX, "
+				+ "SSLL_VARNAME, SSLL_SXBJXX, SSLL_XXBJXX, LJLL_VARNAME, LJLL_SXBJXX, LJLL_XXBJXX) "
+				+ "values (:CODE, :CODE_ID, :RTU_CODE, :RTU_CODE_ID, :ZSYL_VARNAME, :ZSYL_SXBJXX, :ZSYL_XXBJXX,"
+				+ " :SSLL_VARNAME, :SSLL_SXBJXX, :SSLL_XXBJXX, :LJLL_VARNAME, :LJLL_SXBJXX, :LJLL_XXBJXX)";
+		
+		String code = "1";				// 水井井号	
+		int codeId = 11;				// 水井节点 ID
+		String rtuCode = "1";			// 采集rtuCode
+		int rtuCodeId = 22;				// 采集rtu节点 ID
+		String zsylVarName = "1";		// 注水压力变量
+		String zsylSXBJXX = "1";		// 注水压力上限报警提示信息
+		String zsylXXBJXX = "1";		// 注水压力下限报警提示信息
+		String ssllVarName = "1";		// 瞬时流量
+		String ssllSXBJXX = "1";
+		String ssllXXBJXX = "1";
+		String ljllVarName = "1";		// 累计流量
+		String ljllSXBJXX = "1";
+		String ljllXXBJXX = "1";
+		
+		if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
+			
+			for ( int w=0; w< Scheduler.shuiJingList.size(); w++ ) {		// 插入每一口井映射记录
+				
+				EndTag shuiJing = Scheduler.shuiJingList.get(w);		
+				
+				code = shuiJing.getCode();
+				codeId = shuiJing.getId();
+				String extConfigInfo = endTagService.getByCode(code).getExtConfigInfo();
+				if (extConfigInfo != null && !"".equals(extConfigInfo	.trim())) {
+					String[] framesLine1 = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");	// 替换字符串
+					for (String varName3 : framesLine1) {											// yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl
+						if ( varName3.contains("yc|") ) {
+							String varNames1[] = varName3.trim().split("\\|");
+							String varName2 = varNames1[1];
+							String codeName1 = varNames1[2];						// rtu采集点Code
+							if ( varName2.contains("zsyl") ) { 						// 注水压力
+								zsylVarName = varNames1[3];
+								zsylSXBJXX = code + " 注水压力 越上限报警 ";
+								zsylXXBJXX = code + " 注水压力 越下限报警 ";
+								rtuCode = codeName1;
+								rtuCodeId = endTagService.getByCode(rtuCode).getId();
+							} else if ( varName2.contains("shll") ) {
+								ssllVarName = varNames1[3];
+								ssllSXBJXX = code + " 瞬时流量 越上限报警 ";
+								ssllXXBJXX = code + " 瞬时流量 越下限报警 ";
+							} else if ( varName2.contains("ljll") ) {
+								ljllVarName = varNames1[3];
+								ljllSXBJXX = code + " 累计流量 越上限报警 ";
+								ljllXXBJXX = code + " 累计流量 越下限报警 ";
+							}
+							
+						}
+					}
+				}
+				
+//				try (Connection con = sql2o.open()) {
+//					con.createQuery(insertSql) 
+//							.addParameter("CODE", code) 						
+//							.addParameter("CODE_ID", codeId)		
+//							.addParameter("RTU_CODE", rtuCode)			
+//							.addParameter("RTU_CODE_ID", rtuCodeId)					
+//							.addParameter("ZSYL_VARNAME", zsylVarName) 					
+//							.addParameter("ZSYL_SXBJXX", zsylSXBJXX)						
+//							.addParameter("ZSYL_XXBJXX", zsylXXBJXX)						
+//							.addParameter("SSLL_VARNAME", ssllVarName)							
+//							.addParameter("SSLL_SXBJXX", ssllSXBJXX)							
+//							.addParameter("SSLL_XXBJXX", ssllXXBJXX) 					
+//							.addParameter("LJLL_VARNAME", ljllVarName)							
+//							.addParameter("LJLL_SXBJXX", ljllSXBJXX)							
+//							.addParameter("LJLL_XXBJXX", ljllXXBJXX)							
+//							.executeUpdate();
+//				} catch (Exception e) {
+//					log.info("处理水井：" + code + "出现异常！" + e.toString());
+//					continue;
+//				}
+				
+			}
+		}
+		log.info("水井预警Map映射初始化完毕...");
+	}
+
+	@Override
+	public void waterParametersValuePrintln() {
+		// TODO Auto-generated method stub
+
+		if (Scheduler.shuiJingList != null && Scheduler.shuiJingList.size() > 0) {
+			
+			for ( int w=0; w< Scheduler.shuiJingList.size(); w++ ) {		// 插入每一口井映射记录
+				
+				EndTag shuiJing = Scheduler.shuiJingList.get(w);	
+				
+				String code = shuiJing.getCode();
+				String rtuCode = "";
+				String varName = "";
+				//yt|zsylzdlc-压力最大量程|GD1-17-4|zky3yt_zsylzdlc
+				String extConfigInfo = endTagService.getByCode(code).getExtConfigInfo();
+				if (extConfigInfo != null && !"".equals(extConfigInfo	.trim())) {
+					String[] framesLine1 = extConfigInfo.trim().replaceAll("\\r", "").split("\\n");	// 替换字符串
+					for (String varName3 : framesLine1) {											// yc|zsyl-注水压力|psj_z1-10-b|zky12_zsyl
+						if ( varName3.contains("yt|") ) {
+							String varNames1[] = varName3.trim().split("\\|");
+							String varName2 = varNames1[1];
+							rtuCode = varNames1[2];						// rtu采集点Code
+							if ( varName2.contains("zsylzdlc") ) { 						// 注水压力
+								varName = varNames1[3];
+								break;
+							} else {
+								continue;
+							}
+							
+						}
+					}
+				}
+				System.out.println("水井: " + code + ", rtuCode: " + rtuCode + ", 变量: " + varName + ", 值: " + realtimeDataService.getEndTagVarInfo(rtuCode,varName));
+				
+			}
+		}
+	}
+	
+	/**
+	 * 添加一条水井调节检查记录 2015.6.7
+	 * @author PengWang
+	 * @param wwytRecord
+	 */
+	public void ytTestRecordAdd(WaterWellYTRecord wwytRecord) {
+	
+		String insertSql = "insert into T_ENERGYSAVING_YT_TEST "
+				+ "(CODE, START_TIME, XI_SHU, CURRENT_PZ, INTELLIGENT_PZ, RESULT, FIRST_TIME, SECOND_TIME, TEST_INTERVAL) "
+				+ "values (:CODE, :START_TIME, :XI_SHU, :CURRENT_PZ, :INTELLIGENT_PZ, :RESULT, :FIRST_TIME, :SECOND_TIME, :TEST_INTERVAL)";
+
+		try (Connection con = sql2o.open()) {
+			con.createQuery(insertSql)
+				.addParameter("CODE", wwytRecord.getWellCode())
+				.addParameter("START_TIME", wwytRecord.getStartTime())
+				.addParameter("XI_SHU", wwytRecord.getXs())
+				.addParameter("CURRENT_PZ", wwytRecord.getLlsdzBefore())
+				.addParameter("INTELLIGENT_PZ", wwytRecord.getLlsdzAfter())
+				.addParameter("RESULT", wwytRecord.getResult())
+				.addParameter("FIRST_TIME", wwytRecord.getFirstTimeResult())
+				.addParameter("SECOND_TIME", wwytRecord.getSecondTimeResult())
+				.addParameter("TEST_INTERVAL", wwytRecord.getInterval())
+			.executeUpdate();
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.info("处理水井：" + wwytRecord.getWellCode() + "出现异常！" + e.toString());
+		}
+
+	}
 }

@@ -15,4 +15,14 @@ public interface SlytEnergySavingWaterService {
 	 */
 	void intelligentFlowControl() ;
 	
+	/**
+	 * 水井预警Map初始化函数 2015.4.17
+	 * @author PengWang
+	 */
+	void waterWellInfoInit ();
+	
+	/**
+	 * 打印水井相关参数
+	 */
+	void waterParametersValuePrintln();
 }

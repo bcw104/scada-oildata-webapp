@@ -345,9 +345,11 @@ public class SlytGljServiceImpl implements SlytGljService {
         float fhNum = 0;   	//报警符合数
         float czNum = 0;    //报警处置数
         List<Map<String, Object>> handleAlarmList = null;
+        // System.out.println("落实时间： " + startTime.getTime());
         try (Connection con = sql2o.open()) {
-            handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime")
-                    .addParameter("startTime", startTime.getTime())
+        	// 发生和落实时间都在昨日范围内的
+        	handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime and A.ALARMRECORD_ID in ( select ID from T_ALARM_RECORD2 B where B.ACTION_TIME >= :startTime)")
+        			.addParameter("startTime", startTime.getTime())
                     .executeAndFetchTable().asList();
         } catch (Exception e) {
             e.printStackTrace();
@@ -359,7 +361,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                 Integer ID = Integer.valueOf(((BigDecimal) map.get("alarmrecord_id")).toString());
                 Date date = (Date) map.get("assign_time");
                 try (Connection con = sql2o.open()) {			//在T_ALARM_RECORD里查询报警记录
-                    List<Map<String, Object>> mapList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ID = :ID")
+                    List<Map<String, Object>> mapList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ID = :ID ")
 //                    		+ " and A.alarm_type <> '开关井报警'")
                             .addParameter("ID", ID)
                             .executeAndFetchTable().asList();
@@ -372,15 +374,13 @@ public class SlytGljServiceImpl implements SlytGljService {
 
                         Calendar eTime = Calendar.getInstance();
                         eTime.setTime(date2);
-                        eTime.set(Calendar.MINUTE, 0);
-                        eTime.set(Calendar.SECOND, 0);
-                        eTime.set(Calendar.MILLISECOND, 0);
                         eTime.set(Calendar.HOUR_OF_DAY, eTime.get(Calendar.HOUR_OF_DAY) + 2);
+                        System.out.println(date2 + ", " + eTime.getTime());
 
                         try (Connection con1 = sql2o.open()) {
                             Integer num = con1.createQuery("select count(*) from T_ALARM_RECORD2 A where A.VAR_NAME = :VAR_NAME and ENDTAG_ID=:ENDTAG_ID "
-                                    + " and ACTION_TIME > :startTime and ACTION_TIME <=:endTime"
-                                    + " and A.alarm_type not in ( '开关井报警' , 'RTU离线报警')")
+                                    + " and A.ACTION_TIME > :startTime and A.ACTION_TIME <=:endTime"
+                                    + " and A.alarm_type not in ( '开关井报警' , 'RTU离线报警')")					
                                     .addParameter("startTime", date2)
                                     .addParameter("endTime", eTime.getTime())
                                     .addParameter("VAR_NAME", VAR_NAME)
@@ -388,7 +388,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                                     .executeScalar(Integer.class);
                             if (num != null && num > 0) {
                                 fhNum--;
-                                System.out.println("重复报警为：" + alarmRecordID  );
+                                System.out.println("重复报警为：" + alarmRecordID + "	" + date2 + ", " + eTime.getTime() );
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -413,33 +413,33 @@ public class SlytGljServiceImpl implements SlytGljService {
         System.out.println("报警处置及时率：" + CZJSL);
         System.out.println("报警处置符合率" + CZFHL);
         
-        String sql = "insert into SHPT.SHPT_SCKHZB "
-                + "(GLQDM, RQ, MKSXL, SJBDL, SJQQL, BJPC, CZJSL, CZFHL, YJSL, YJTJL, PHHGL, ZSJSL, PZWCL, ZSBH, CYBH, ZRDJL, GKHGL, GLQMC) "
-                + "values (:GLQDM, :RQ, :MKSXL, :SJBDL, :SJQQL, :BJPC, :CZJSL, :CZFHL, :YJSL, :YJTJL, :PHHGL, :ZSJSL, :PZWCL, :ZSBH, :CYBH, :ZRDJL, :GKHGL, :GLQMC)";
-        try (Connection con = sql2o1.open()) {
-            con.createQuery(sql)
-                    .addParameter("GLQDM", GLQDM) //管理区代码
-                    .addParameter("RQ", calendar.getTime()) //日期
-                    .addParameter("MKSXL", MKSXL) //生产单元模块上线率
-                    .addParameter("SJBDL", SJBDL) //数据标定率
-                    .addParameter("SJQQL", SJQQL) //采集数据齐全率
-                    .addParameter("BJPC", BJPC) //单元模块报警频次
-                    .addParameter("CZJSL", CZJSL) //报警处置及时率
-                    .addParameter("CZFHL", CZFHL) //报警处置符合率
-                    .addParameter("YJSL", YJSL) //油井时率
-                    .addParameter("YJTJL", YJTJL) //油井躺井率
-                    .addParameter("PHHGL", PHHGL) //平衡合格率
-                    .addParameter("ZSJSL", ZSJSL) //注水井时率
-                    .addParameter("PZWCL", PZWCL) //配注完成率
-                    .addParameter("ZSBH", ZSBH) //注水标耗
-                    .addParameter("CYBH", CYBH) //采油标耗
-                    .addParameter("ZRDJL", ZRDJL) //自然递减率
-                    .addParameter("GKHGL", GKHGL) //工况合格率
-                    .addParameter("GLQMC", GLQMC) //管理区名称
-                    .executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        String sql = "insert into SHPT.SHPT_SCKHZB "
+//                + "(GLQDM, RQ, MKSXL, SJBDL, SJQQL, BJPC, CZJSL, CZFHL, YJSL, YJTJL, PHHGL, ZSJSL, PZWCL, ZSBH, CYBH, ZRDJL, GKHGL, GLQMC) "
+//                + "values (:GLQDM, :RQ, :MKSXL, :SJBDL, :SJQQL, :BJPC, :CZJSL, :CZFHL, :YJSL, :YJTJL, :PHHGL, :ZSJSL, :PZWCL, :ZSBH, :CYBH, :ZRDJL, :GKHGL, :GLQMC)";
+//        try (Connection con = sql2o1.open()) {
+//            con.createQuery(sql)
+//                    .addParameter("GLQDM", GLQDM) //管理区代码
+//                    .addParameter("RQ", calendar.getTime()) //日期
+//                    .addParameter("MKSXL", MKSXL) //生产单元模块上线率
+//                    .addParameter("SJBDL", SJBDL) //数据标定率
+//                    .addParameter("SJQQL", SJQQL) //采集数据齐全率
+//                    .addParameter("BJPC", BJPC) //单元模块报警频次
+//                    .addParameter("CZJSL", CZJSL) //报警处置及时率
+//                    .addParameter("CZFHL", CZFHL) //报警处置符合率
+//                    .addParameter("YJSL", YJSL) //油井时率
+//                    .addParameter("YJTJL", YJTJL) //油井躺井率
+//                    .addParameter("PHHGL", PHHGL) //平衡合格率
+//                    .addParameter("ZSJSL", ZSJSL) //注水井时率
+//                    .addParameter("PZWCL", PZWCL) //配注完成率
+//                    .addParameter("ZSBH", ZSBH) //注水标耗
+//                    .addParameter("CYBH", CYBH) //采油标耗
+//                    .addParameter("ZRDJL", ZRDJL) //自然递减率
+//                    .addParameter("GKHGL", GKHGL) //工况合格率
+//                    .addParameter("GLQMC", GLQMC) //管理区名称
+//                    .executeUpdate();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         log.info("完成写入生产运行指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
     }
 
@@ -678,6 +678,7 @@ public class SlytGljServiceImpl implements SlytGljService {
         endTime.set(Calendar.MINUTE, 0);
         endTime.set(Calendar.SECOND, 0);
         endTime.set(Calendar.MILLISECOND, 0);
+        // System.out.println(startTime.getTime() + " , " + endTime.getTime());
         
         List<Map<String, Object>> alarmList = null;			// 排除了开井报警的报警（目前现场未对开井报警进行处置）
         try (Connection con = sql2o.open()) {
@@ -692,6 +693,7 @@ public class SlytGljServiceImpl implements SlytGljService {
         if (alarmList != null) {
         	RBJS = (float) alarmList.size();	// 不含开井报警的报警数
         }
+        // System.out.println("日报警数" + RBJS);
         
         // -------处置次数： 报警时间在查询日期前一天8:00到查询日期8:00范围内所有报警的处置数量（合并处置算作一次处置操作）---------------
         // -------报警处置完成数：报警时间在查询日期的前一天8:00到查询日期8:00的报警处置完成的数量------------------------------------
@@ -1711,6 +1713,7 @@ public class SlytGljServiceImpl implements SlytGljService {
     	} else {
     		// doNothing
     	}
+    	System.out.println(aSum + ", " + bSum);
     	ZRDJL =  (bSum-aSum)/bSum ; 		//自然递减率
     	log.info("自然递减率为: " + ZRDJL + "	老井A阶段总产油量: " + aSum + "  , 前个B阶段总产油量: " + bSum);
 
@@ -1723,27 +1726,411 @@ public class SlytGljServiceImpl implements SlytGljService {
         String sql = "update SHPT.SHPT_SCKHZB set "
         		+ "YJSL = :YJSL, YJTJL = :YJTJL, PHHGL = :PHHGL, ZSJSL = :ZSJSL, PZWCL = :PZWCL, ZSBH = :ZSBH, CYBH = :CYBH, ZRDJL = :ZRDJL, GKHGL = :GKHGL"
         		+ " where glqdm = :glqdm and rq = :datetime";
-//        try (Connection con = sql2o1.open()) {
-//            con.createQuery(sql)
-//                    .addParameter("YJSL", YJSL * 100)	 			//油井时率
-//                    .addParameter("YJTJL", YJTJL * 100) 			//油井躺井率
-//                    .addParameter("PHHGL", PHHGL * 100) 			//平衡合格率
-//                    .addParameter("ZSJSL", ZSJSL * 100) 			//注水井时率
-//                    .addParameter("PZWCL", PZWCL * 100) 			//配注完成率
-//                    .addParameter("ZSBH", ZSBH == null ? null : ZSBH ) 				//注水标耗
-//                    .addParameter("CYBH", CYBH ) 									//采油标耗
-//                    .addParameter("ZRDJL", ZRDJL == null ? null : ZRDJL * 100) 		//自然递减率
-//                    .addParameter("GKHGL", GKHGL == null ? null : GKHGL * 100) 		//工况合格率
-//                    .addParameter("glqdm", GLQDM) 									//管理区代码
-//                    .addParameter("datetime", c.getTime())							// 日期
-//                    .executeUpdate();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+        try (Connection con = sql2o1.open()) {
+            con.createQuery(sql)
+                    .addParameter("YJSL", YJSL * 100)	 			//油井时率
+                    .addParameter("YJTJL", YJTJL * 100) 			//油井躺井率
+                    .addParameter("PHHGL", PHHGL * 100) 			//平衡合格率
+                    .addParameter("ZSJSL", ZSJSL * 100) 			//注水井时率
+                    .addParameter("PZWCL", PZWCL * 100) 			//配注完成率
+                    .addParameter("ZSBH", ZSBH == null ? null : ZSBH ) 				//注水标耗
+                    .addParameter("CYBH", CYBH ) 									//采油标耗
+                   // .addParameter("ZRDJL", ZRDJL == null ? null : ZRDJL * 100) 		//自然递减率
+                    .addParameter("GKHGL", GKHGL == null ? null : GKHGL * 100) 		//工况合格率
+                    .addParameter("glqdm", GLQDM) 									//管理区代码
+                    .addParameter("datetime", c.getTime())							// 日期
+                    .executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         log.info("完成更新生产考核指标（生产运行、经营管理）数据——现在时刻：" + CommonUtils.date2String(new Date()));
 	
 	}
 	
+	
+	  /**
+     * 系统运行指标更新函数
+     */
+	public void runSckhzbTask_SystemRunUpdate(){
+
+        log.info("开始写入生产考核指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
+
+        String GLQDM = "30202009";  //管理区代码 YS_DAB08@YDK
+        Float MKSXL = 90f; 			//生产单元模块上线率
+        Float SJBDL = null; 		//数据标定率
+        Float SJQQL = 90f; 			//采集数据齐全率
+        Float BJPC = 2f; 			//单元模块报警频次
+        Float CZJSL = 90f;  		//报警处置及时率
+        Float CZFHL = 90f; 			//报警处置符合率
+        Float YJSL = null;  		//油井时率
+        Float YJTJL = null; 		//油井躺井率
+        Float PHHGL = null; 		//平衡合格率
+        Float ZSJSL = null; 		//注水井时率
+        Float PZWCL = null; 		//配注完成率
+        Float ZSBH = null;  		//注水标耗
+        Float CYBH = null;  		//采油标耗
+        Float ZRDJL = null; 		//自然递减率
+        Float GKHGL = null; 		//工况合格率
+        String GLQMC = "孤岛采油管理四区";
+
+        /**
+         * *计算生产单元模块上线率********
+         */
+        float scdyNum = 0; 			//实际上线的数量
+        float allNum = 0;  			//应上线的数量
+        float sjNum = 0;			//水井个数
+
+        List<Map<String, Object>> list = null;
+        try (Connection con = sql2o.open()) {
+            // list = con.createQuery("select * from T_END_TAG where code <> 'GD1-19-815'").executeAndFetchTable().asList();
+            list = con.createQuery("select * from T_END_TAG where code not in ('GD1-19-815','jlz_pt_78','jlz_pt_9','jlz_pt_g2-6-2')")
+            		.executeAndFetchTable().asList();
+        } catch (Exception e) {
+        	e.printStackTrace();
+        }
+        
+        log.info("（1）生产单元模块上线率考核详细指标如下：");
+        if (list != null) {
+            scdyNum = 0;
+            for (Map<String, Object> map : list) {
+                String type = (String) map.get("type");
+                String code = (String) map.get("code");
+                switch (type) {
+                    case "YOU_JING":
+                        allNum++;
+                        //有通讯井+措施关井+长停井
+                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
+                            scdyNum++;
+                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()) != null
+                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()))) {
+                            scdyNum++;
+                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()) != null
+                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()))) {
+                            scdyNum++;
+                        } else {
+                        	log.info("	" + code + " 处RTU未知通讯异常！");
+                        }
+                        break;
+                    case "JI_LIANG_ZHAN":
+                        allNum++;
+                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
+                            scdyNum++;
+                        } else {
+                        	log.info("	" + code + " 处RTU未知通讯异常！");
+                        }
+                        break;
+                    case "PEI_SHUI_JIAN":
+                        allNum++;
+                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
+                            scdyNum++;
+                        } else {
+                        	log.info("	" + code + " 处RTU未知通讯异常！");
+                        }
+                        break;
+                    case "ZHU_SHUI_JING":	// 暂时未做深层次考核（考核时需要读取关联的RTU在线状态）
+                        allNum++;
+                        scdyNum++;
+                        sjNum++;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        
+        List<Map<String, Object>> spList = null;	// 视频上线率统计
+        try (Connection con = sql2o.open()) {
+            spList = con.createQuery("select RELATEDCODE,VAR_NAME, IPADDRESS from R_NETCHECKING where DEVICETYPE='摄像头'").executeAndFetchTable().asList();
+        } catch (Exception e) {
+        }
+        
+        int spOnNum = 0;
+        if (spList != null) {
+            allNum = allNum + spList.size();
+            for (Map<String, Object> map : spList) {
+                String varName = (String) map.get("var_name");
+                String code = (String) map.get("relatedcode");
+                String ip = (String)map.get("ipaddress");
+                String status = realtimeDataService.getEndTagVarInfo(code, varName);
+                if (status != null && "true".equals(status)) {
+                    spOnNum++;
+                } else {
+                	log.info("	" + code + " 处关联的视频异常！ IP为： " + ip);
+                }
+            }
+            scdyNum = scdyNum + spOnNum;
+            log.info("在线视频数/视频总数: " + spOnNum + "/" +spList.size());
+        }
+
+        if (allNum > 0) {
+            MKSXL = scdyNum * 100 / allNum;
+            log.info("实际上线模块数/应上线模块总数：" + scdyNum + "/" + allNum + "	模块上线率： " + MKSXL + "\r\n");
+        }
+             
+        
+        /**
+         * *计算采集数据齐全率********
+         */
+        log.info("（2）生产单元数据齐全率考核详细指标如下：");
+        if (list != null) {
+            float allQqNum = 0;
+            float onNum = 0;
+            for (Map<String, Object> map : list) {
+                String type = (String) map.get("type");
+                String subType = (String) map.get("sub_type");
+                String code = (String) map.get("code");
+                if ("YOU_JING".equals(type) && "true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
+                	
+                	if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing"))) {	// 排除作业井、关井、长停井、措施关井，只留开井
+                		allQqNum = allQqNum + 4;
+                        if ("YOU_LIANG_SHI".equals(subType) || "GAO_YUAN_JI".equals(subType) ) {
+                            allQqNum++;
+                            if (getRealtimeDataNew(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) > -10000) {
+                                onNum++;
+                            } else {
+                            	log.info("	" + code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 载荷为： " , getRealtimeDataNew(code, VarSubTypeEnum.ZUI_DA_ZAI_HE.toString().toLowerCase()) );
+                            }
+                        }
+                       if (getRealtimeDataNew(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()) >  -10000) {			//套压
+//                        if ( "true".equals(realtimeDataService.getEndTagVarInfo(code, "ty_shi_neng_cgq6"))) {			//套压
+//                        	System.out.println(getRealtimeDataNew(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase()));
+                        	//System.out.println(getRealtimeDataNew(code, "cgq_rtu_time_cgq6"));
+                            onNum++;
+//                            if ( getRealtimeDataNew(code, "cgq_rtu_time_cgq6") > 0  ) {
+//                            	//System.out.println(code + getRealtimeDataNew(code, "cgq_rtu_time_cgq6"));
+//                            	 System.out.println(code + "	"+ getRealtimeDataNew(code, "cgq_rtu_time_cgq6") +"	" + getRealtimeDataNew(code, VarSubTypeEnum.TAO_YA.toString().toLowerCase())) ;
+//                                 
+//                            }
+                        }else {
+//                        	log.info("使能：" + realtimeDataService.getEndTagVarInfo(code, "ty_shi_neng_cgq6"));
+//                        	log.info("	" + code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 套压为： " + getRealtimeDataNew(code, "cgq_rtu_time_cgq6") );
+                        }
+                        if (getRealtimeDataNew(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) >  -10000) {	// 油压
+                            onNum++;
+                        }else {
+                        	log.info("	" + code+ " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 井口温度为： " , getRealtimeDataNew(code, VarSubTypeEnum.JING_KOU_WEN_DU.toString().toLowerCase()) );
+                        }
+                        if (getRealtimeDataNew(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) >  -10000) {			// 回压
+                            onNum++;	
+                        } else {
+                        	log.info("	" + code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 回压为： " , getRealtimeDataNew(code, VarSubTypeEnum.HUI_YA.toString().toLowerCase()) );
+                        }
+                        if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15"))) {				//智能电表
+                            onNum++;
+                        } else {
+                        	log.info("	" + code + " " +realtimeDataService.getEndTagVarInfo(code, "you_jing_yun_xing") + " 智能电表为： " , realtimeDataService.getEndTagVarInfo(code, "zndb_zai_xian_cgq15") );
+                        }
+                	}
+                    
+                }
+            }
+            if (allQqNum > 0) {
+                SJQQL = onNum * 100 / allQqNum;
+                log.info("实际上线数据项/应上线数据项：" + onNum + "/" + allQqNum + "	数据齐全率： " + SJQQL + " \r\n");
+            }
+        }
+
+        /**
+         * *计算单元模块报警频次********
+         */
+        log.info("（3）单元模块报警频次：");
+        float bjNum = 0;    //报警次数
+        // 昨天6:50到今天6:50的报警数目 （用于报警频次考核）
+        Calendar startTime = Calendar.getInstance();
+        startTime.set(Calendar.DAY_OF_MONTH, startTime.get(Calendar.DAY_OF_MONTH) - 1);
+        startTime.set(Calendar.HOUR_OF_DAY, 6);
+        startTime.set(Calendar.MINUTE, 50);
+        startTime.set(Calendar.SECOND, 0);
+        startTime.set(Calendar.MILLISECOND, 0);
+       
+        Calendar endTime = Calendar.getInstance();
+        endTime.set(Calendar.HOUR_OF_DAY, 6);	
+        endTime.set(Calendar.MINUTE, 50);	
+        endTime.set(Calendar.SECOND, 0);
+        endTime.set(Calendar.MILLISECOND, 0);
+        System.out.println(startTime.getTime() + " , " + endTime.getTime());
+        
+        // 昨天6:20到今天6:20的报警数目 （用于报警及时率考核）
+        Calendar startTime1 = Calendar.getInstance();
+        startTime1.set(Calendar.DAY_OF_MONTH, startTime1.get(Calendar.DAY_OF_MONTH) - 1);
+        startTime1.set(Calendar.HOUR_OF_DAY, 6);
+        startTime1.set(Calendar.MINUTE, 20);
+        startTime1.set(Calendar.SECOND, 0);
+        startTime1.set(Calendar.MILLISECOND, 0);
+       
+        Calendar endTime1 = Calendar.getInstance();
+        endTime1.set(Calendar.HOUR_OF_DAY, 6);	
+        endTime1.set(Calendar.MINUTE, 20);	
+        endTime1.set(Calendar.SECOND, 0);
+        endTime1.set(Calendar.MILLISECOND, 0);
+        System.out.println(startTime1.getTime() + " , " + endTime1.getTime());
+        
+        
+        List<Map<String, Object>> alarmList = null;		//排除了开井报警的报警（目前现场未对开井报警进行处置，为了增加频次，顾在计算式让报警数往多了统计）
+        List<Map<String, Object>> alarmListALL = null; // 所有的报警
+        try (Connection con = sql2o.open()) {
+            // 仅包含油井报警
+        	alarmList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime1 and A.ACTION_TIME<=:endTime1 and A.alarm_level>4 and info <> '开井报警' and A.ENDTAG_ID in (select T.ID from T_END_TAG T where T.TYPE='YOU_JING')")
+                    .addParameter("startTime1", startTime1.getTime())
+                    .addParameter("endTime1", endTime1.getTime())
+                    .executeAndFetchTable().asList();
+        	
+        	// 另外包含预警
+        	//alarmList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime1 and A.ACTION_TIME<=:endTime1 and info <> '开井报警' and A.ENDTAG_ID in (select T.ID from T_END_TAG T where T.TYPE in ('YOU_JING','JI_LIANG_ZHAN','PEI_SHUI_JIAN'))")
+            //        .addParameter("startTime1", startTime1.getTime())
+            //        .addParameter("endTime1", endTime1.getTime())
+            //        .executeAndFetchTable().asList();
+            
+            alarmListALL = con.createQuery("select * from T_ALARM_RECORD2 A where A.ACTION_TIME >=:startTime and A.ACTION_TIME<=:endTime ")
+                    .addParameter("startTime", startTime.getTime())
+                    .addParameter("endTime", endTime.getTime())
+                    .executeAndFetchTable().asList();
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (alarmListALL != null) {
+            bjNum = alarmList.size();	// 不含开井报警的报警数
+            if (scdyNum > 0) {
+                BJPC = alarmListALL.size() / (scdyNum - spOnNum - sjNum);
+                //log.info("阶段单元模块报警次数(不含开井)：" + bjNum);
+                log.info("阶段单元模块报警次数/实际上线模块数：" + alarmListALL.size() + "/" + (scdyNum - spOnNum - sjNum) + "	报警频次： " + BJPC + " -------------" );
+            }
+        }
+
+        /**
+         * *计算报警处置及时率********
+         */
+        log.info("（4）报警处置及时率：");
+        float jsbjNum = 0;  //及时报警数
+        if (alarmList != null) {
+            for (Map<String, Object> map : alarmList) {
+                Integer ID = Integer.valueOf(((BigDecimal) map.get("id")).toString());
+                Date date = (Date) map.get("action_time");
+                Calendar c = Calendar.getInstance();
+                c.setTime(date);
+                c.set(Calendar.MINUTE, c.get(Calendar.MINUTE) + 31);	//报警发生30分钟内进行处置为及时处置
+                
+                try (Connection con = sql2o.open()) {
+//                	Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME is not null ")	// 落实时间不为空
+                	Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME <:endTime ")	// 落实时间不为空
+                        	
+                			//.addParameter("startTime", date)
+                            .addParameter("endTime", c.getTime())
+                            .addParameter("ID", ID)
+                            .executeScalar(Integer.class);
+                    if (num != null && num > 0) {
+                        jsbjNum++;
+                    } else {
+                    	System.out.println("报警ID为： " + ID + "的报警未及时处置！");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        if (bjNum > 0) {
+            CZJSL = jsbjNum * 100 / bjNum;
+            log.info("报警及时处置数/发生次数：" +jsbjNum + "/" + bjNum + "	报警处置及时率：" + CZJSL + " -----------------------------------------");
+        }
+
+        /**
+         * *计算报警处置符合率********
+         */
+        log.info("（5）报警处置符合率：");
+        float fhNum = 0;   	//报警符合数
+        float czNum = 0;    //报警处置数
+        List<Map<String, Object>> handleAlarmList = null;
+        // System.out.println("落实时间： " + startTime.getTime());
+        try (Connection con = sql2o.open()) {
+        	// 发生和落实时间都在昨日范围内的
+        	handleAlarmList = con.createQuery("select * from T_ALARM_HANDLE_RECORD A where A.ASSIGN_TIME >=:startTime and A.ALARMRECORD_ID in ( select ID from T_ALARM_RECORD2 B where B.ACTION_TIME >= :startTime)")
+        			.addParameter("startTime", startTime.getTime())
+                    .executeAndFetchTable().asList();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (handleAlarmList != null) {
+            czNum = handleAlarmList.size();
+            fhNum = czNum;
+            for (Map<String, Object> map : handleAlarmList) {	//两个小时内不再出现为符合报警
+                Integer ID = Integer.valueOf(((BigDecimal) map.get("alarmrecord_id")).toString());
+                Date date = (Date) map.get("assign_time");
+                try (Connection con = sql2o.open()) {			//在T_ALARM_RECORD里查询报警记录
+                    List<Map<String, Object>> mapList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ID = :ID ")
+//                    		+ " and A.alarm_type <> '开关井报警'")
+                            .addParameter("ID", ID)
+                            .executeAndFetchTable().asList();
+                    if (mapList != null) {
+                        Map<String, Object> myMap = mapList.get(0);
+                        Integer alarmRecordID = Integer.valueOf(((BigDecimal) myMap.get("id")).toString());
+                        String VAR_NAME = (String) myMap.get("var_name");
+                        Integer ENDTAG_ID = Integer.valueOf(((BigDecimal) myMap.get("endtag_id")).toString());
+                        Date date2 = (Date) myMap.get("action_time");
+
+                        Calendar eTime = Calendar.getInstance();
+                        eTime.setTime(date2);
+                        eTime.set(Calendar.HOUR_OF_DAY, eTime.get(Calendar.HOUR_OF_DAY) + 2);
+                        System.out.println(date2 + ", " + eTime.getTime());
+
+                        try (Connection con1 = sql2o.open()) {
+                            Integer num = con1.createQuery("select count(*) from T_ALARM_RECORD2 A where A.VAR_NAME = :VAR_NAME and ENDTAG_ID=:ENDTAG_ID "
+                                    + " and A.ACTION_TIME > :startTime and A.ACTION_TIME <=:endTime"
+                                    + " and A.alarm_type not in ( '开关井报警' , 'RTU离线报警')")					
+                                    .addParameter("startTime", date2)
+                                    .addParameter("endTime", eTime.getTime())
+                                    .addParameter("VAR_NAME", VAR_NAME)
+                                    .addParameter("ENDTAG_ID", ENDTAG_ID)
+                                    .executeScalar(Integer.class);
+                            if (num != null && num > 0) {
+                                fhNum--;
+                                System.out.println("重复报警为：" + alarmRecordID + "	" + date2 + ", " + eTime.getTime() );
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+            CZFHL = fhNum * 100 / czNum;
+            log.info("报警处置次数：" + czNum);
+            log.info("报警处置符合现场实际数：" + fhNum);
+            log.info("报警处置符合率：" + CZFHL);
+        }
+        
+        
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        System.out.println("报警频次为： " + BJPC);
+        System.out.println("报警处置及时率：" + CZJSL);
+        System.out.println("报警处置符合率" + CZFHL);
+        
+        String updateSql = "update SHPT.SHPT_SCKHZB set "
+        				+ "MKSXL = :MKSXL, SJQQL = :SJQQL, BJPC = :BJPC, CZJSL = :CZJSL, CZFHL = :CZFHL"
+        				+ " where GLQDM = :GLQDM and RQ = :RQ";
+        System.out.println("管理区代码： " + GLQDM  + ", 日期： " + calendar.getTime());
+        System.out.println("模块上线率： " + MKSXL  + ", 采集齐全率： " + SJQQL + ", 报警频次：" + BJPC + ", 处置及时率： " + CZJSL + ", 处置符合率： " + CZFHL);
+        
+        try (Connection con = sql2o1.open()) {
+            con.createQuery(updateSql)
+                    .addParameter("GLQDM", GLQDM) //管理区代码
+                    .addParameter("RQ", calendar.getTime()) //日期
+                    .addParameter("MKSXL", MKSXL) //生产单元模块上线率
+                    .addParameter("SJQQL", SJQQL) //采集数据齐全率
+                    .addParameter("BJPC", BJPC) //单元模块报警频次
+                    .addParameter("CZJSL", CZJSL) //报警处置及时率
+                    .addParameter("CZFHL", CZFHL) //报警处置符合率
+                    .executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        log.info("完成写入生产运行指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
+    
+    }
     
     
 }

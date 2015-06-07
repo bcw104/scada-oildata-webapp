@@ -474,6 +474,13 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                             ZXZH = gtfxMap.get("zxzh") == null ? null : Float.parseFloat(((BigDecimal) gtfxMap.get("zxzh")).toString());
                             CYL = gtfxMap.get("rcyl1") == null ? 0f : Float.parseFloat(((BigDecimal) gtfxMap.get("rcyl1")).toString());
                         }
+                        //特殊处理
+                        if(code.equals("GD1-18P219")) {
+                            if(CYL<=0) {
+                                String tscl = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.WETK_RI_SS_CYL.toString());
+                                CYL = tscl==null? 0f : Float.parseFloat(tscl);
+                            }
+                        }
                     } else {//螺杆泵液量采用班累积
                         String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
                         CYL = rtCYL == null ? 0f : Float.valueOf(rtCYL);
@@ -529,6 +536,11 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
 
                     //23.55以上认为是24
                     if (RLJYXSJ != null && RLJYXSJ >= 1435) {
+                        RLJYXSJ = 1440f;
+                    }
+                    if(RLJYXSJ == 1320) {
+                        RLJYXSJ = 1440f;
+                    } else if(RLJYXSJ == 1200) {
                         RLJYXSJ = 1440f;
                     }
 

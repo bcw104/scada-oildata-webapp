@@ -484,6 +484,10 @@ public class OilWellDataCalcServiceImpl implements OilWellDataCalcService {
                     } else {//螺杆泵液量采用班累积
                         String rtCYL = realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.BAN_LJCYL.toString());
                         CYL = rtCYL == null ? 0f : Float.valueOf(rtCYL);
+                        String sxdlStr = realtimeDataService.getEndTagVarInfo(code, "i_a");
+                        if(sxdlStr != null) {
+                            SXDL = Float.valueOf(sxdlStr);
+                        }
                     }
 
 

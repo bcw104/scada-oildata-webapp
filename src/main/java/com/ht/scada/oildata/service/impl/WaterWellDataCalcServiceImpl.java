@@ -221,7 +221,9 @@ public class WaterWellDataCalcServiceImpl implements WaterWellDataCalcService {
 
                     //最后一班写入注水累积流量值
                     if (SJD.equals("8:00")) {
-                        realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_ZSLJLL.toString(), LJLL == null ? "0" : String.valueOf(LJLL));
+                        if(LJLL != null) {
+                            realtimeDataService.putValue(code, RedisKeysEnum.RI_LINGSHI_ZSLJLL.toString(), String.valueOf(LJLL));
+                        }
                     }
 
                     try (Connection con = sql2o.open()) {

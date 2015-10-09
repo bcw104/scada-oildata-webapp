@@ -16,7 +16,7 @@
         <property name="testOnBorrow" value="${redis.testOnBorrow}" />
     </bean>
     <bean id="connectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
-          p:hostName="${redis.host}" p:port="${redis.port}" p:poolConfig-ref="poolConfig" />
+          p:timeout="${redis.timeout}" p:hostName="${redis.host}" p:port="${redis.port}" p:poolConfig-ref="poolConfig" />
     <!-- Configurer that replaces ${...} placeholders with values from a properties file -->
     <!--<context:property-placeholder location="classpath*:/redis.properties"/>-->
 

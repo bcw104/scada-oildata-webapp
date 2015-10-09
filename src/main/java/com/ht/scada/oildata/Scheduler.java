@@ -120,7 +120,7 @@ public class Scheduler {
     /**
      * 9、11、13、15、17、19、21、23、1、3、5、7
      */
-//    @Scheduled(cron = "0 45 1/2 * * ? ")
+    @Scheduled(cron = "0 45 1/2 * * ? ")
     private void oilBanBaoTask() {
         oilWellDataCalcService.runBanBaoTask();
     }
@@ -128,22 +128,22 @@ public class Scheduler {
     /**
      * 每天7点半将报表数据写入数据库
      */
-//    @Scheduled(cron = "0 0 8 * * ? ")
+    @Scheduled(cron = "0 0 8 * * ? ")
     private void oilRiBaoTask() {
         oilWellDataCalcService.runRiBaoTask();
     }
 
-//    @Scheduled(cron = "0 0 12 * * ? ")
+    @Scheduled(cron = "0 0 12 * * ? ")
     private void wellClosedInfo() {
         commonScdtService.wellClosedInfo();
     }
 
-//    @Scheduled(cron = "0 50 1/2 * * ? ")
+    @Scheduled(cron = "0 50 1/2 * * ? ")
     private void waterBanBaoTask() {
         waterWellDataCalcService.runBanBaoTask();
     }
 
-//    @Scheduled(cron = "0 5 8 * * ? ")
+    @Scheduled(cron = "0 5 8 * * ? ")
     private void waterRiBaoTask() {
         waterWellDataCalcService.runRiBaoTask();
     }

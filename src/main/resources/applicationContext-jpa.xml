@@ -78,7 +78,8 @@
     <!-- 数据源配置, 使用DBCP数据库连接池 -->
     <bean id="dataSource1" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
         <property name="driverClassName" value="${jdbc.driver}" />
-        <property name="url" value="jdbc:oracle:thin:@10.68.35.120:1521:orcl" />
+        <!-- <property name="url" value="jdbc:oracle:thin:@10.68.35.120:1521:orcl" /> 2015.4.21修改前-->
+        <property name="url" value="jdbc:oracle:thin:@10.69.162.200:1521:orcl" />
         <property name="username" value="shptzjk" />
         <property name="password" value="shptzjk" />
 		

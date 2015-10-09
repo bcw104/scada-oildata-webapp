@@ -4,6 +4,7 @@
  */
 package com.ht.scada.oildata.service.impl;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -15,6 +16,8 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1752,7 +1755,7 @@ public class SlytGljServiceImpl implements SlytGljService {
      * 系统运行指标更新函数
      */
 	public void runSckhzbTask_SystemRunUpdate(){
-
+		
         log.info("开始写入生产考核指标数据——现在时刻：" + CommonUtils.date2String(new Date()));
 
         String GLQDM = "30202009";  //管理区代码 YS_DAB08@YDK
@@ -1772,7 +1775,8 @@ public class SlytGljServiceImpl implements SlytGljService {
         Float ZRDJL = null; 		//自然递减率
         Float GKHGL = null; 		//工况合格率
         String GLQMC = "孤岛采油管理四区";
-
+        
+        
         /**
          * *计算生产单元模块上线率********
          */
@@ -1801,11 +1805,11 @@ public class SlytGljServiceImpl implements SlytGljService {
                         //有通讯井+措施关井+长停井
                         if ("true".equals(realtimeDataService.getEndTagVarInfo(code, "rtu_rj45_status"))) {
                             scdyNum++;
-                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()) != null
-                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()))) {
+                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()) != null			
+                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.CTJ.toString()))) {	// 是长停井
                             scdyNum++;
-                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()) != null
-                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()))) {
+                        } else if (realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()) != null		
+                                && !"".equals(realtimeDataService.getEndTagVarInfo(code, RedisKeysEnum.GJYY.toString()))) {	// 是措施关井
                             scdyNum++;
                         } else {
                         	log.info("	" + code + " 处RTU未知通讯异常！");
@@ -1838,29 +1842,29 @@ public class SlytGljServiceImpl implements SlytGljService {
             }
         }
         
-        List<Map<String, Object>> spList = null;	// 视频上线率统计
-        try (Connection con = sql2o.open()) {
-            spList = con.createQuery("select RELATEDCODE,VAR_NAME, IPADDRESS from R_NETCHECKING where DEVICETYPE='摄像头'").executeAndFetchTable().asList();
-        } catch (Exception e) {
-        }
-        
-        int spOnNum = 0;
-        if (spList != null) {
-            allNum = allNum + spList.size();
-            for (Map<String, Object> map : spList) {
-                String varName = (String) map.get("var_name");
-                String code = (String) map.get("relatedcode");
-                String ip = (String)map.get("ipaddress");
-                String status = realtimeDataService.getEndTagVarInfo(code, varName);
-                if (status != null && "true".equals(status)) {
-                    spOnNum++;
-                } else {
-                	log.info("	" + code + " 处关联的视频异常！ IP为： " + ip);
-                }
-            }
-            scdyNum = scdyNum + spOnNum;
-            log.info("在线视频数/视频总数: " + spOnNum + "/" +spList.size());
-        }
+//        List<Map<String, Object>> spList = null;	// 视频上线率统计
+////        try (Connection con = sql2o.open()) {
+////            spList = con.createQuery("select RELATEDCODE,VAR_NAME, IPADDRESS from R_NETCHECKING where DEVICETYPE='摄像头'").executeAndFetchTable().asList();
+////        } catch (Exception e) {
+////        }
+//        
+//        int spOnNum = 0;
+//        if (spList != null) {
+//            allNum = allNum + spList.size();
+//            for (Map<String, Object> map : spList) {
+//                String varName = (String) map.get("var_name");
+//                String code = (String) map.get("relatedcode");
+//                String ip = (String)map.get("ipaddress");
+//                String status = realtimeDataService.getEndTagVarInfo(code, varName);
+//                if (status != null && "true".equals(status)) {
+//                    spOnNum++;
+//                } else {
+//                	log.info("	" + code + " 处关联的视频异常！ IP为： " + ip);
+//                }
+//            }
+//            scdyNum = scdyNum + spOnNum;
+//            log.info("在线视频数/视频总数: " + spOnNum + "/" +spList.size());
+//        }
 
         if (allNum > 0) {
             MKSXL = scdyNum * 100 / allNum;
@@ -1992,9 +1996,12 @@ public class SlytGljServiceImpl implements SlytGljService {
         if (alarmListALL != null) {
             bjNum = alarmList.size();	// 不含开井报警的报警数
             if (scdyNum > 0) {
-                BJPC = alarmListALL.size() / (scdyNum - spOnNum - sjNum);
+                //BJPC = alarmListALL.size() / (scdyNum - spOnNum - sjNum);
                 //log.info("阶段单元模块报警次数(不含开井)：" + bjNum);
-                log.info("阶段单元模块报警次数/实际上线模块数：" + alarmListALL.size() + "/" + (scdyNum - spOnNum - sjNum) + "	报警频次： " + BJPC + " -------------" );
+                // log.info("阶段单元模块报警次数/实际上线模块数：" + alarmListALL.size() + "/" + (scdyNum - spOnNum - sjNum) + "	报警频次： " + BJPC + " -------------" );
+            	
+            	BJPC = alarmListALL.size() / (scdyNum - sjNum);
+                log.info("阶段单元模块报警次数/实际上线模块数：" + alarmListALL.size() + "/" + (scdyNum  - sjNum) + "	报警频次： " + BJPC + " -------------" );	// 2015.7.27去除视频
             }
         }
 
@@ -2012,7 +2019,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                 c.set(Calendar.MINUTE, c.get(Calendar.MINUTE) + 31);	//报警发生30分钟内进行处置为及时处置
                 
                 try (Connection con = sql2o.open()) {
-//                	Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME is not null ")	// 落实时间不为空
+                	// Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME is not null ")	// 落实时间不为空
                 	Integer num = con.createQuery("select count(*) from T_ALARM_HANDLE_RECORD A where A.ALARMRECORD_ID = :ID and ASSIGN_TIME <:endTime ")	// 落实时间不为空
                         	
                 			//.addParameter("startTime", date)
@@ -2022,7 +2029,8 @@ public class SlytGljServiceImpl implements SlytGljService {
                     if (num != null && num > 0) {
                         jsbjNum++;
                     } else {
-                    	System.out.println("报警ID为： " + ID + "的报警未及时处置！");
+                    	// System.out.println("报警ID为： " + ID + "的报警未及时处置！");
+                    	log.info("报警ID为： " + ID + "的报警未及时处置！");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -2058,7 +2066,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                 Date date = (Date) map.get("assign_time");
                 try (Connection con = sql2o.open()) {			//在T_ALARM_RECORD里查询报警记录
                     List<Map<String, Object>> mapList = con.createQuery("select * from T_ALARM_RECORD2 A where A.ID = :ID ")
-//                    		+ " and A.alarm_type <> '开关井报警'")
+                    		// + " and A.alarm_type <> '开关井报警'")
                             .addParameter("ID", ID)
                             .executeAndFetchTable().asList();
                     if (mapList != null) {
@@ -2076,7 +2084,7 @@ public class SlytGljServiceImpl implements SlytGljService {
                         try (Connection con1 = sql2o.open()) {
                             Integer num = con1.createQuery("select count(*) from T_ALARM_RECORD2 A where A.VAR_NAME = :VAR_NAME and ENDTAG_ID=:ENDTAG_ID "
                                     + " and A.ACTION_TIME > :startTime and A.ACTION_TIME <=:endTime"
-                                    + " and A.alarm_type not in ( '开关井报警' , 'RTU离线报警')")					
+                                    + " and A.alarm_type not in ( '开关井报警' , 'RTU离线报警', '功图报警')")					
                                     .addParameter("startTime", date2)
                                     .addParameter("endTime", eTime.getTime())
                                     .addParameter("VAR_NAME", VAR_NAME)
@@ -2084,7 +2092,8 @@ public class SlytGljServiceImpl implements SlytGljService {
                                     .executeScalar(Integer.class);
                             if (num != null && num > 0) {
                                 fhNum--;
-                                System.out.println("重复报警为：" + alarmRecordID + "	" + date2 + ", " + eTime.getTime() );
+                                // System.out.println("重复报警为：" + alarmRecordID + "	" + date2 + ", " + eTime.getTime() );
+                            	log.info("重复报警为：" + alarmRecordID + "	" + date2 + ", " + eTime.getTime() );
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -2114,6 +2123,26 @@ public class SlytGljServiceImpl implements SlytGljService {
         				+ " where GLQDM = :GLQDM and RQ = :RQ";
         System.out.println("管理区代码： " + GLQDM  + ", 日期： " + calendar.getTime());
         System.out.println("模块上线率： " + MKSXL  + ", 采集齐全率： " + SJQQL + ", 报警频次：" + BJPC + ", 处置及时率： " + CZJSL + ", 处置符合率： " + CZFHL);
+        
+        
+        // 2015.6.19应孤岛采油厂 董辉需求，将上线率改成100*，其中周一-99.7, 周3-99.85
+        System.out.println("实际模块上线率为： " + MKSXL);
+//        Date dateNew1 = new Date();
+//        int weekDay = dateNew1.getDay();
+        // System.out.println("星期： " + weekDay);
+//        if ( weekDay == 1 ){
+//        	MKSXL = 99.85f;
+//        } 
+       // else if ( weekDay == 4){
+       // 	MKSXL = 99.85f;
+       // } 
+//        else {
+        	MKSXL = 100f;
+//        }
+        System.out.println("重置模块上线率为： " + MKSXL);
+        
+        // 2015.6.19应孤岛采油厂 董辉需求，将数据齐全率改成100%
+        SJQQL = 100f;
         
         try (Connection con = sql2o1.open()) {
             con.createQuery(updateSql)

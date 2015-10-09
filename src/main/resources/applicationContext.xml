@@ -73,15 +73,15 @@
         <property name="ignoreResourceNotFound" value="true" />
         <property name="locations">
             <list>
-                <!--<value>file:config.properties</value>-->
-                <value>file:${user.dir}/config.properties</value>
-                <value>classpath*:config.properties</value>
+                <!-- <value>file:config.properties</value> -->
+                 <!-- <value>file:${user.dir}/config.properties</value> -->
+                <value>classpath*:config.properties</value> 
             </list>
         </property>
     </bean>
 
     <!-- 启动运行 -->
-    <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="testYourMathod"/>-->
-    <bean id="scheduler" class="com.ht.scada.oildata.dr.DataRouter" init-method="dataRouter"/>
+    <bean id="scheduler" class="com.ht.scada.oildata.Scheduler" init-method="testYourMathod"/>
+    <!--  <bean id="scheduler" class="com.ht.scada.oildata.dr.DataRouter" init-method="dataRouter"/> -->
     <!--<bean id="scheduler" class="com.ht.scada.oildata.Scheduler"/>-->
 </beans>

@@ -11,6 +11,7 @@ import com.ht.scada.oildata.service.QkOilWellRecordService;
 import com.ht.scada.oildata.service.ScslService;
 import com.ht.scada.oildata.service.SgtAnalyzeService;
 import com.ht.scada.oildata.service.SlytGljService;
+import com.ht.scada.oildata.service.SlytEnergySavingWaterService;
 import com.ht.scada.oildata.service.WaterWellDataCalcService;
 import com.ht.scada.oildata.service.WellInfoInsertService;
 
@@ -53,6 +54,9 @@ public class Scheduler {
     @Autowired
     private SgtAnalyzeService sgtAnalyzeService;
     
+    @Autowired
+   private SlytEnergySavingWaterService slytEnergySavingWaterService;
+    
     public static List<EndTag> youJingList;
     public static List<EndTag> shuiJingList;
     public static List<String> youCodeList = new ArrayList<>();
@@ -78,11 +82,15 @@ public class Scheduler {
 //        qkOilWellRecordService.runSjRiBaoTask();
 //        commonScdtService.test();
 //        slytGljService.runSckhzbTask();
+          slytGljService.runSckhzbTask_SystemRunUpdate();
 //        slytGljService.runSckhzbUpdateTask();
 //        slytGljService.runSckhzbUpdateTaskFromRealDate();
-//        slytGljService.shywkh();
+//          slytGljService.shywkh(); 
 //        sgtAnalyzeService.sgtAnalyze();
 //        netCheckService.netChecking();
+//        slytEnergySavingWaterService.intelligentFlowControl();
+//        slytEnergySavingWaterService.waterWellInfoInit();
+//        slytEnergySavingWaterService.waterParametersValuePrintln();
     }
 
     private void init() {
@@ -155,7 +163,7 @@ public class Scheduler {
      * 写入配水阀组数据
      */
 //    @Scheduled(cron = "0 0/5 * * * ? ")
-    @Scheduled(cron = "0 0/1 * * * ? ")
+//    @Scheduled(cron = "0 0/1 * * * ? ")
     private void minite5Task() {
         waterWellDataCalcService.runPsfzTask(Calendar.getInstance());
     }
@@ -228,6 +236,14 @@ public class Scheduler {
     }
     /*******************END 桥口定时任务****************************************/
     
+    /**********************孤岛定时任务 begin *************************************/
+//    @Scheduled(cron = "0 0,30 7-23 * * ? ")
+    private void gdznpzTask() {
+    	 slytEnergySavingWaterService.intelligentFlowControl();
+    }
+    /**********************孤岛定时任务 end *************************************/
+    
+    
     /*******************START 胜利油田局生产指标考核****************************************/
 //    @Scheduled(cron = "0 50 6 * * ? ")
     private void sczbkhTask() {
@@ -244,7 +260,12 @@ public class Scheduler {
     	slytGljService.runSckhzbUpdateTaskFromRealDate();
     }
     
-//    @Scheduled(cron = "0 0/15 * * * ? ")
+    @Scheduled(cron = "0 30 8 * * ? ")
+    private void runSckhzbTask_SystemRunUpdate() {
+    	slytGljService.runSckhzbTask_SystemRunUpdate();
+    }
+    
+    @Scheduled(cron = "0 0/15 * * * ? ")
     private void  shywkhTask(){					// 运维考核日报
     	 slytGljService.shywkh();
     }

@@ -292,7 +292,7 @@ public class SgtCalcService {
         //***************END 威尔泰克功图 ******************
 
         //写入到历史数据表
-        updateHisSgtData(wetkCyl, wetkYl, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date);
+        updateHisSgtData(wetkCyl, wetkYl, HS, PHL, DYM, SXGL, XXGL, SRGL, GGGL, SLGL, XTXL, GTMJ, BX, SXDL, XXDL, PJSZ, PJXZ, ZDXX, ZDCD, ZDYJ, code, date, CYL);
     }
 
     private boolean isSgtOk(String code) {
@@ -318,9 +318,9 @@ public class SgtCalcService {
     }
 
     private void updateHisSgtData(Float CYL, Float YL, Float HS, Float PHL, Float DYM, Float SXGL, Float XXGL, Float SRGL, Float GGGL, Float SLGL, Float XTXL,
-            Float GTMJ, Float BX, Float SXDL, Float XXDL, Float PJSZ, Float PJXZ, String ZDXX, Float ZDCD, String ZDYJ, String code, Date date) {
+            Float GTMJ, Float BX, Float SXDL, Float XXDL, Float PJSZ, Float PJXZ, String ZDXX, Float ZDCD, String ZDYJ, String code, Date date, Float CYL1) {
         String sql = "update T_SGT_HISTORY set CYL=:CYL,YL=:YL,HS=:HS,PHL=:PHL,DYM=:DYM,SXGL=:SXGL,XXGL=:XXGL,SRGL=:SRGL, "
-                + " GGGL=:GGGL,SLGL=:SLGL,XTXL=:XTXL,GTMJ=:GTMJ,BX=:BX,SXDL=:SXDL,XXDL=:XXDL,PJSZ=:PJSZ,PJXZ=:PJXZ,ZDXX=:ZDXX,ZDCD=:ZDCD,ZDYJ=:ZDYJ,JSSJ=:JSSJ "
+                + " GGGL=:GGGL,SLGL=:SLGL,XTXL=:XTXL,GTMJ=:GTMJ,BX=:BX,SXDL=:SXDL,XXDL=:XXDL,PJSZ=:PJSZ,PJXZ=:PJXZ,ZDXX=:ZDXX,ZDCD=:ZDCD,ZDYJ=:ZDYJ,JSSJ=:JSSJ,CYL1=:CYL1 "
                 + " where code=:CODE and DATETIME=:DATE";
 
         try (Connection con = sql2o.open()) {
@@ -348,6 +348,7 @@ public class SgtCalcService {
                     .addParameter("JSSJ", new Date())
                     .addParameter("CODE", code)
                     .addParameter("DATE", date)
+                    .addParameter("CYL1", CYL1)
                     .executeUpdate();
             log.info("更新完计算信息：" + code + " " + sdf.format(date));
         } catch (Exception e) {
